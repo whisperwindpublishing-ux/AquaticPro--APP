@@ -91,9 +91,14 @@ export default function NewHiresPage() {
                   <td className="ap-px-5 ap-py-3 ap-text-gray-600">{h.applicationDate ? new Date(h.applicationDate).toLocaleDateString() : "—"}</td>
                   <td className="ap-px-5 ap-py-3"><Badge variant={STATUS_VARIANT[h.status] ?? "neutral"}>{h.status}</Badge></td>
                   <td className="ap-px-5 ap-py-3">
-                    <div className="ap-flex ap-gap-2">
-                      {h.status !== "approved" && <Button size="sm" variant="ghost" onClick={() => updateStatus(h.id, "approved")}>Approve</Button>}
+                    <div className="ap-flex ap-gap-2 ap-flex-wrap">
+                      {h.status !== "approved" && h.status !== "hired" && <Button size="sm" variant="ghost" onClick={() => updateStatus(h.id, "approved")}>Approve</Button>}
                       {h.status !== "rejected" && <Button size="sm" variant="ghost" onClick={() => updateStatus(h.id, "rejected")}>Reject</Button>}
+                      {(h.status === "approved" || h.status === "hired") && (
+                        <a href={`/api/new-hires/${h.id}/loi`} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="secondary">LOI</Button>
+                        </a>
+                      )}
                     </div>
                   </td>
                 </tr>

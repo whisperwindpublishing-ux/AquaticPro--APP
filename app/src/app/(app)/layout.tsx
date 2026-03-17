@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth/session";
 import { resolvePermissions } from "@/lib/auth/permissions";
 import { Sidebar } from "@/components/nav/Sidebar";
+import { MobileNavDrawer } from "@/components/nav/MobileNavDrawer";
 
 /**
  * Authenticated app shell layout.
@@ -27,10 +28,11 @@ export default async function AppLayout({
 
       {/* Main content area */}
       <div className="ap-flex ap-flex-1 ap-flex-col ap-min-w-0">
-        {/* Mobile header (lg+ is handled by sidebar footer) */}
+        {/* Mobile header (lg+ is handled by sidebar) */}
         <header className="ap-flex lg:ap-hidden ap-h-14 ap-items-center ap-justify-between ap-border-b ap-border-gray-100 ap-bg-white ap-px-4">
+          <MobileNavDrawer user={user} permissions={permissions} />
           <span className="ap-text-sm ap-font-bold ap-text-gray-900">AquaticPro</span>
-          <span className="ap-text-xs ap-text-gray-500">{user.displayName}</span>
+          <span className="ap-text-xs ap-text-gray-500 ap-truncate ap-max-w-[120px]">{user.displayName}</span>
         </header>
 
         <main className="ap-flex-1 ap-p-6">{children}</main>

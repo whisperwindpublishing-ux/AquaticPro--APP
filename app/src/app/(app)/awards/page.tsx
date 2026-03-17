@@ -35,6 +35,8 @@ export default function AwardsPage() {
   const categories = catData?.categories ?? [];
   const nominations = nomData?.nominations ?? [];
 
+  const catMap = Object.fromEntries(categories.map(c => [c.id, c.name]));
+
   async function nominate(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -106,7 +108,7 @@ export default function AwardsPage() {
             <div key={n.id} className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-4 ap-shadow-sm ap-flex ap-flex-col ap-gap-2">
               <div className="ap-flex ap-items-center ap-justify-between">
                 <span className="ap-text-xs ap-font-semibold ap-text-gray-500">Nominee #{n.nomineeId}</span>
-                <Badge variant="info">Cat #{n.categoryId}</Badge>
+                <Badge variant="info">{catMap[n.categoryId] ?? `Category #${n.categoryId}`}</Badge>
               </div>
               {n.reason && <p className="ap-text-sm ap-text-gray-700 ap-line-clamp-3">{n.reason}</p>}
               <button onClick={() => vote(n.id)} className="ap-mt-auto ap-self-start ap-text-xs ap-font-medium ap-text-brand-600 hover:ap-underline">👍 Vote</button>

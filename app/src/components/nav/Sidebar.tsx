@@ -124,6 +124,9 @@ export function Sidebar({ user, permissions: p }: SidebarProps) {
             <NavItem href="/admin" icon={icons.admin} label="Admin" />
           </>
         )}
+
+        <SectionLabel>Account</SectionLabel>
+        <NavItem href="/profile" icon="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" label="My Profile" />
       </nav>
 
       {/* User footer */}
