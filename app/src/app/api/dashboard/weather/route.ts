@@ -13,7 +13,7 @@
  */
 import { NextRequest } from "next/server";
 import { requireSession } from "@/lib/auth/session";
-import { redis } from "@/lib/cache/redis";
+import { getRedis } from "@/lib/cache/redis";
 import { ok, badRequest, serverError } from "@/lib/utils/api-helpers";
 
 // WMO weather code → human-readable condition
@@ -69,12 +69,13 @@ export async function GET(request: NextRequest) {
 
     // Check weather cache first (30 min TTL)
     const weatherCacheKey = `weather:${zip}`;
-    const cached = await redis.get<WeatherCache>(weatherCacheKey);
+    const redis = getRedis();
+    const cached = redis ? await redis.get<WeatherCache>(weatherCacheKey) : null;
     if (cached) return ok(cached);
 
     // Step 1 — Geocode (cached 7 days)
     const geoCacheKey = `geo:zip:${zip}`;
-    let geo = await redis.get<GeoCache>(geoCacheKey);
+    let geo = redis ? await redis.get<GeoCache>(geoCacheKey) : null;
 
     if (!geo) {
       const geoUrl = `https://nominatim.openstreetmap.org/search?postalcode=${encodeURIComponent(zip)}&country=US&format=json&limit=1`;
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
         city: geoData[0].display_name?.split(",")[0] ?? zip,
       };
 
-      await redis.set(geoCacheKey, geo, { ex: 60 * 60 * 24 * 7 });
+      if (redis) await redis.set(geoCacheKey, geo, { ex: 60 * 60 * 24 * 7 });
     }
 
     // Step 2 — Fetch weather from Open-Meteo (no API key required)
@@ -139,7 +140,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Cache weather for 30 minutes
-    await redis.set(weatherCacheKey, result, { ex: 60 * 30 });
+    if (redis) await redis.set(weatherCacheKey, result, { ex: 60 * 30 });
 
     return ok(result);
   } catch (e) {
