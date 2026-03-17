@@ -1,0 +1,44 @@
+// This is your Prisma schema file for AquaticPro.
+// Connects to Supabase PostgreSQL.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// Core Models (Phase 1 — will be expanded)
+// ============================================
+
+model User {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  displayName String   @map("display_name")
+  firstName   String?  @map("first_name")
+  lastName    String?  @map("last_name")
+  avatarUrl   String?  @map("avatar_url")
+  phone       String?
+  bio         String?
+  isMember    Boolean  @default(true) @map("is_member")
+  isArchived  Boolean  @default(false) @map("is_archived")
+  isWpAdmin   Boolean  @default(false) @map("is_wp_admin")
+  supabaseUid String   @unique @map("supabase_uid")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model AppSetting {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
