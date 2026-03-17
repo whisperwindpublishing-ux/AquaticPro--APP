@@ -3,19 +3,14 @@ import { cached } from "@/lib/cache/redis";
 import { forbidden } from "@/lib/utils/api-helpers";
 import type { SessionUser } from "./session";
 
-/**
- * Permission resolution — replaces WordPress tier checks, mp_is_plugin_admin(),
- * and per-module permission table lookups.
- *
- * TODO Phase 2: implement full tier + per-module resolution from:
- *   - pg_job_roles (tier 1-6)
- *   - pg_user_job_assignments (user → role mapping)
- *   - mp_daily_log_permissions, pg_scan_audit_permissions, etc.
- */
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export interface UserPermissions {
-  isAdmin: boolean;       // isWpAdmin OR tier >= 6
-  tier: number;           // Max tier across all job role assignments (1-6)
+  /** true when the user's max tier meets or exceeds the aquaticpro_app_admin_tier threshold */
+  isAdmin: boolean;
+  /** highest tier (1-6) across all pg_user_job_assignments → pg_job_roles */
+  tier: number;
+  /** per-module access flags derived from the job-role permission tables */
   modules: {
     dailyLogs: boolean;
     professionalGrowth: boolean;
@@ -33,45 +28,182 @@ export interface UserPermissions {
   };
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** true if any record in arr satisfies pred */
+function any<T>(arr: T[], pred: (x: T) => boolean): boolean {
+  return arr.some(pred);
+}
+
+/** Returns all-false modules — used when user has no job role assignments */
+function noAccess(): UserPermissions["modules"] {
+  return {
+    dailyLogs: false,
+    professionalGrowth: false,
+    taskdeck: false,
+    awesomeAwards: false,
+    seasonalReturns: false,
+    mileage: false,
+    certificates: false,
+    lms: false,
+    whiteboard: false,
+    newHires: false,
+    emailComposer: false,
+    foiaExport: false,
+    lessonManagement: false,
+  };
+}
+
+/** Fetch max tier across a list of job role IDs. Returns 0 if none. */
+async function maxTierForRoles(jobRoleIds: number[]): Promise<number> {
+  if (jobRoleIds.length === 0) return 0;
+  const roles = await prisma.pgJobRole.findMany({
+    where: { id: { in: jobRoleIds } },
+    select: { tier: true },
+  });
+  return roles.reduce((max, r) => Math.max(max, r.tier), 0);
+}
+
+// ─── Core resolver ────────────────────────────────────────────────────────────
+
 /**
  * Resolve full permissions for a user.
- * Results are cached in Redis for 5 minutes.
+ *
+ * Algorithm:
+ *  1. Load all pg_user_job_assignments for the user → collect jobRoleIds
+ *  2. Query pg_job_roles to find the user's max tier (1-6)
+ *  3. Read aquaticpro_app_admin_tier from app_settings (default: 6)
+ *  4. isAdmin = maxTier >= adminTier
+ *  5. For each module, query its permission table keyed by jobRoleId and
+ *     aggregate across all of the user's roles using OR logic
+ *
+ * Results are cached in Redis for 5 minutes per user.
  */
 export async function resolvePermissions(userId: number): Promise<UserPermissions> {
   return cached(
     `permissions:${userId}`,
     async () => {
-      // TODO Phase 2: query pg_user_job_assignments → pg_job_roles for tier
-      // For now: check if user's highest job role tier meets admin threshold
-      const topAssignment = await prisma.pgUserJobAssignment.findFirst({
+      // 1. Get all job role IDs for this user
+      const assignments = await prisma.pgUserJobAssignment.findMany({
         where: { userId },
-        orderBy: { jobRoleId: "desc" },
         select: { jobRoleId: true },
       });
+      const jobRoleIds = assignments.map((a) => a.jobRoleId);
 
-      const isAdmin = false; // will use role tier in Phase 2
+      // 2. Determine max tier
+      const tier = await maxTierForRoles(jobRoleIds);
 
+      // 3. Get admin threshold from app_settings
+      const adminTierSetting = await prisma.appSetting.findUnique({
+        where: { key: "aquaticpro_app_admin_tier" },
+        select: { value: true },
+      });
+      const adminTier = parseInt(adminTierSetting?.value ?? "6", 10);
+      const isAdmin = tier >= adminTier;
+
+      // Fast-path: no role assignments → completely locked out
+      if (jobRoleIds.length === 0) {
+        return { isAdmin: false, tier: 0, modules: noAccess() };
+      }
+
+      // 4. Fetch per-module permission rows in parallel
+      const [
+        dailyLogPerms,
+        lmsPerms,
+        taskdeckPerms,
+        srmPerms,
+        awardsPerms,
+        mileagePerms,
+        emailPerms,
+        lessonMgmtPerms,
+      ] = await Promise.all([
+        prisma.mpDailyLogPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.pgLmsPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.pgTaskdeckPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.srmPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.awesomeAwardsPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.mpMileagePermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.pgEmailPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+        prisma.pgLessonManagementPermission.findMany({
+          where: { jobRoleId: { in: jobRoleIds } },
+        }),
+      ]);
+
+      // 5. Build module flags — OR logic across all assigned roles
       return {
         isAdmin,
-        tier: isAdmin ? 6 : 1,
+        tier,
         modules: {
-          dailyLogs: true,
-          professionalGrowth: true,
-          taskdeck: true,
-          awesomeAwards: true,
-          seasonalReturns: true,
-          mileage: true,
-          certificates: true,
-          lms: true,
-          whiteboard: true,
+          // Daily Logs: any role record with canView
+          dailyLogs: any(dailyLogPerms, (p) => p.canView),
+
+          // Professional Growth: all assigned staff (tier ≥ 1), admin gets full access
+          professionalGrowth: tier >= 1,
+
+          // TaskDeck: any role record with canView
+          taskdeck: any(taskdeckPerms, (p) => p.canView),
+
+          // Awesome Awards: can nominate or vote
+          awesomeAwards:
+            any(awardsPerms, (p) => p.canNominate) ||
+            any(awardsPerms, (p) => p.canVote),
+
+          // Seasonal Returns: can view own pay
+          seasonalReturns: any(srmPerms, (p) => p.srmViewOwnPay),
+
+          // Mileage: can submit entries
+          mileage: any(mileagePerms, (p) => p.canSubmit),
+
+          // Certificates: all active staff can see their own certs (tier ≥ 1)
+          certificates: tier >= 1,
+
+          // LMS: can view courses
+          lms: any(lmsPerms, (p) => p.canViewCourses),
+
+          // Whiteboard: tied to lesson management viewing
+          whiteboard: any(lessonMgmtPerms, (p) => p.canView),
+
+          // New Hires: admin-only
           newHires: isAdmin,
-          emailComposer: isAdmin,
+
+          // Email Composer: explicit per-role grant
+          emailComposer: any(emailPerms, (p) => p.canSendEmail),
+
+          // FOIA Export: admin-only
           foiaExport: isAdmin,
-          lessonManagement: true,
+
+          // Lesson Management: can view lessons/courses in editor
+          lessonManagement: any(lessonMgmtPerms, (p) => p.canView),
         },
       };
     },
-    300 // 5 min cache
+    300 // 5 min TTL
+  );
+}
+
+// ─── Guard helpers ────────────────────────────────────────────────────────────
+
+/**
+ * Invalidate cached permissions for a user (call after role assignment changes).
+ */
+export function invalidatePermissions(userId: number): Promise<void> {
+  // Import lazily to avoid circular dep issues at module load time
+  return import("@/lib/cache/redis").then(({ invalidateCachePrefix }) =>
+    invalidateCachePrefix(`permissions:${userId}`)
   );
 }
 
@@ -89,10 +221,24 @@ export async function requireAdmin(user: SessionUser): Promise<
 /**
  * Require minimum tier level.
  */
-export async function requireTier(user: SessionUser, minTier: number): Promise<
-  [UserPermissions, null] | [null, ReturnType<typeof forbidden>]
-> {
+export async function requireTier(
+  user: SessionUser,
+  minTier: number
+): Promise<[UserPermissions, null] | [null, ReturnType<typeof forbidden>]> {
   const perms = await resolvePermissions(user.id);
   if (perms.tier < minTier) return [null, forbidden(`Tier ${minTier}+ required`)];
+  return [perms, null];
+}
+
+/**
+ * Require access to a specific module — returns [perms, null] or [null, 403].
+ */
+export async function requireModule(
+  user: SessionUser,
+  module: keyof UserPermissions["modules"]
+): Promise<[UserPermissions, null] | [null, ReturnType<typeof forbidden>]> {
+  const perms = await resolvePermissions(user.id);
+  if (!perms.modules[module])
+    return [null, forbidden(`${module} access required`)];
   return [perms, null];
 }

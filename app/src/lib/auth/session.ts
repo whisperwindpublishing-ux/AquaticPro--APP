@@ -1,14 +1,21 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorized } from "@/lib/utils/api-helpers";
+import { resolvePermissions, type UserPermissions } from "./permissions";
 
 export interface SessionUser {
   id: number;
   supabaseUid: string;
   email: string;
   displayName: string;
+  avatarUrl: string | null;
   isMember: boolean;
   isArchived: boolean;
+}
+
+export interface SessionWithPermissions {
+  user: SessionUser;
+  permissions: UserPermissions;
 }
 
 /**
@@ -30,12 +37,24 @@ export async function getSession(): Promise<SessionUser | null> {
       supabaseUid: true,
       email: true,
       displayName: true,
+      avatarUrl: true,
       isMember: true,
       isArchived: true,
     },
   });
 
   return dbUser;
+}
+
+/**
+ * Get session + resolved permissions in one call.
+ * Use in Server Components that need to gate entire pages.
+ */
+export async function getSessionWithPermissions(): Promise<SessionWithPermissions | null> {
+  const user = await getSession();
+  if (!user) return null;
+  const permissions = await resolvePermissions(user.id);
+  return { user, permissions };
 }
 
 /**
