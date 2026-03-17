@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useApi } from "@/hooks/useApi";
 import { apiClient } from "@/lib/api-client";
+import { createClient } from "@/lib/supabase/client";
 import { FullPageSpinner, EmptyState, Badge, Button, PageHeader } from "@/components/ui";
 
 interface Goal {
@@ -75,6 +76,20 @@ export default function GoalsPage() {
   const { data, loading, error, refetch } = useApi<{ goals: Goal[]; total: number }>("/api/goals");
   const [editing, setEditing]   = useState<Goal | undefined>(undefined);
   const [showModal, setShowModal] = useState(false);
+
+  // Realtime: re-fetch goals whenever any row in MentorshipGoal changes
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("goals-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "MentorshipGoal" },
+        () => { refetch(); }
+      )
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [refetch]);
 
   if (loading) return <FullPageSpinner />;
   if (error || !data) return <EmptyState title="Could not load goals" description="Please refresh." />;
