@@ -55,15 +55,47 @@ export async function POST(request: NextRequest) {
 
     if (body.action === "send") {
       if (!body.subject) return badRequest("subject required");
-      // Actual send goes through the email lib; log the send here.
+      if (!body.bodyHtml) return badRequest("bodyHtml required");
+
+      // Resolve recipients: explicit userIds or all non-archived users
+      const bodyExtended = body as typeof body & { userIds?: number[] };
+      let recipientIds: number[] = bodyExtended.userIds ?? [];
+
+      if (recipientIds.length === 0) {
+        // Fall back to all active members
+        const allActive = await prisma.user.findMany({
+          where: { isArchived: false, isMember: true },
+          select: { id: true },
+        });
+        recipientIds = allActive.map((u) => u.id);
+      }
+
+      // Enqueue one row per recipient — the cron will send them
+      if (recipientIds.length > 0) {
+        await prisma.aquaticproEmailQueue.createMany({
+          data: recipientIds.map((uid) => ({
+            userId: uid,
+            emailType: "email_composer",
+            subject: body.subject!,
+            body: body.bodyHtml!,
+            contextId: null,
+            status: "pending",
+          })),
+          skipDuplicates: false,
+        });
+      }
+
+      // Log this send session for the history tab
       const log = await prisma.aquaticproEmailComposerLog.create({
         data: {
-          subject: body.subject, bodyHtml: body.bodyHtml ?? null,
-          recipientCount: body.recipientCount ?? 0,
-          sentBy: user.id, recipientSummary: body.recipientSummary ?? null,
+          subject: body.subject,
+          bodyHtml: body.bodyHtml,
+          recipientCount: recipientIds.length,
+          sentBy: user.id,
+          recipientSummary: body.recipientSummary ?? `${recipientIds.length} recipients`,
         },
       });
-      return ok({ logged: log.id, message: "Email queued for sending" });
+      return ok({ logged: log.id, queued: recipientIds.length, message: "Email queued for sending" });
     }
 
     return badRequest("action must be send or save-template");

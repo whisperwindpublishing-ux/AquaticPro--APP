@@ -53,9 +53,28 @@ export async function POST(request: NextRequest) {
     if (body.action === "nominate") {
       const { periodId, categoryId, nomineeId, message } = body as unknown as { periodId: number; categoryId: number; nomineeId: number; message?: string };
       if (!periodId || !categoryId || !nomineeId) return badRequest("periodId, categoryId, nomineeId required");
-      const nomination = await prisma.awesomeAwardsNomination.create({
-        data: { periodId, categoryId, nomineeId, nominatorId: user.id, reason: message ?? null },
+
+      const [nomination, category, nominator] = await Promise.all([
+        prisma.awesomeAwardsNomination.create({
+          data: { periodId, categoryId, nomineeId, nominatorId: user.id, reason: message ?? null },
+        }),
+        prisma.awesomeAwardsCategory.findUnique({ where: { id: categoryId }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: user.id }, select: { displayName: true } }),
+      ]);
+
+      // Queue a notification email to the nominee
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      await prisma.aquaticproEmailQueue.create({
+        data: {
+          userId: nomineeId,
+          emailType: "awards_nomination",
+          subject: `You've been nominated for an Awesome Award! 🏆`,
+          body: `<p><strong>${nominator?.displayName ?? "A colleague"}</strong> has nominated you for the <strong>${category?.name ?? ""}</strong> award.</p>${message ? `<blockquote>${message}</blockquote>` : ""}<p><a href="${appUrl}/awards">View Awards &rarr;</a></p>`,
+          contextId: nomination.id,
+          status: "pending",
+        },
       });
+
       return created(nomination);
     }
 

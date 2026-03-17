@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/auth/session";
 import { resolvePermissions } from "@/lib/auth/permissions";
 import { ok, created, badRequest, forbidden, serverError, notFound, parseBody } from "@/lib/utils/api-helpers";
+import { cached } from "@/lib/cache/redis";
 
 /**
  * GET /api/professional-growth
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
     const [roles, assignments, criteria, progress] = await Promise.all([
       section === "all" || section === "roles"
-        ? prisma.pgJobRole.findMany({ orderBy: { tier: "asc" } })
+        ? cached("roles:all", () => prisma.pgJobRole.findMany({ orderBy: { tier: "asc" } }), 3600)
         : Promise.resolve([]),
       section === "all" || section === "assignments"
         ? prisma.pgUserJobAssignment.findMany({

@@ -61,6 +61,20 @@ export async function POST(request: NextRequest) {
         data: body.userIds.map((uid) => ({ assignmentId: assignment.id, userId: uid })),
         skipDuplicates: true,
       });
+
+      // Queue assignment notification emails for each enrolled user
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+      await prisma.aquaticproEmailQueue.createMany({
+        data: body.userIds.map((uid) => ({
+          userId: uid,
+          emailType: "lms_assignment",
+          subject: `New Learning Assignment: ${assignment.title}`,
+          body: `<p>You have been assigned a new learning module: <strong>${assignment.title}</strong>.</p>${assignment.dueDate ? `<p>Due: ${assignment.dueDate.toLocaleDateString()}</p>` : ""}<p><a href="${appUrl}/lessons">View your assignments &rarr;</a></p>`,
+          contextId: assignment.id,
+          status: "pending",
+        })),
+        skipDuplicates: false,
+      });
     }
     return created(assignment);
   } catch (e) { return serverError(e); }
