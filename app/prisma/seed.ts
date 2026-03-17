@@ -11,14 +11,17 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { PrismaClient } from "../src/generated/prisma";
+import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import * as dotenv from "dotenv";
 import * as path from "path";
 
-// Load .env.local
+// Load env — try .env.local first, fall back to .env
 dotenv.config({ path: path.resolve(__dirname, "../.env.local") });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
+const prisma = new PrismaClient({ adapter });
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 

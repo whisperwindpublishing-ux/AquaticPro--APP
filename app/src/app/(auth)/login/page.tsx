@@ -8,12 +8,12 @@ export const metadata: Metadata = {
 
 export default function LoginPage() {
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm p-8 bg-white rounded-2xl shadow-sm border border-gray-100">
+    <main className="ap-min-h-screen ap-flex ap-items-center ap-justify-center ap-bg-gray-50">
+      <div className="ap-w-full ap-max-w-sm ap-p-8 ap-bg-white ap-rounded-2xl ap-shadow-sm ap-border ap-border-gray-100">
         {/* Logo / wordmark */}
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-900">AquaticPro</h1>
-          <p className="mt-1 text-sm text-gray-500">Sign in to your account</p>
+          <div className="ap-mb-8 ap-text-center">
+          <h1 className="ap-text-2xl ap-font-bold ap-text-gray-900">AquaticPro</h1>
+          <p className="ap-mt-1 ap-text-sm ap-text-gray-500">Sign in to your account</p>
         </div>
         {/* Suspense required because LoginForm calls useSearchParams() */}
         <Suspense fallback={null}>
