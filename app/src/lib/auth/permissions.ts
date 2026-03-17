@@ -42,13 +42,14 @@ export async function resolvePermissions(userId: number): Promise<UserPermission
     `permissions:${userId}`,
     async () => {
       // TODO Phase 2: query pg_user_job_assignments → pg_job_roles for tier
-      // For now, return safe defaults — admins must be marked isWpAdmin in DB
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { isWpAdmin: true },
+      // For now: check if user's highest job role tier meets admin threshold
+      const topAssignment = await prisma.pgUserJobAssignment.findFirst({
+        where: { userId },
+        orderBy: { jobRoleId: "desc" },
+        select: { jobRoleId: true },
       });
 
-      const isAdmin = user?.isWpAdmin ?? false;
+      const isAdmin = false; // will use role tier in Phase 2
 
       return {
         isAdmin,

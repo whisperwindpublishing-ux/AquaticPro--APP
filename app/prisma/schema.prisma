@@ -1,5 +1,6 @@
-// This is your Prisma schema file for AquaticPro.
-// Connects to Supabase PostgreSQL.
+// AquaticPro — Full Prisma Schema (Phase 1)
+// Generated from DATABASE_SCHEMA.md — all 65 custom tables + CPT-derived tables
+// PostgreSQL via Supabase. No url/directUrl here — handled by prisma.config.ts (Prisma 7).
 
 generator client {
   provider = "prisma-client"
@@ -10,9 +11,9 @@ datasource db {
   provider = "postgresql"
 }
 
-// ============================================
-// Core Models (Phase 1 — will be expanded)
-// ============================================
+// ============================================================
+// CORE
+// ============================================================
 
 model User {
   id          Int      @id @default(autoincrement())
@@ -23,9 +24,15 @@ model User {
   avatarUrl   String?  @map("avatar_url")
   phone       String?
   bio         String?
-  isMember    Boolean  @default(true) @map("is_member")
+  tagline     String?
+  mentorOptIn Boolean  @default(false) @map("mentor_opt_in")
+  skills      String?  // JSON array of strings
+  bioDetails  String?  @map("bio_details")
+  experience  String?
+  linkedinUrl String?  @map("linkedin_url")
+  customLinks String?  @map("custom_links") // JSON array of {label, url}
+  isMember    Boolean  @default(true)  @map("is_member")
   isArchived  Boolean  @default(false) @map("is_archived")
-  isWpAdmin   Boolean  @default(false) @map("is_wp_admin")
   supabaseUid String   @unique @map("supabase_uid")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -41,4 +48,1826 @@ model AppSetting {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_settings")
+}
+
+// ============================================================
+// 1. DAILY LOGS MODULE
+// ============================================================
+
+model MpTimeSlot {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique @db.VarChar(100)
+  label       String   @db.VarChar(255)
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  color       String?  @db.VarChar(7)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("mp_time_slots")
+}
+
+// Daily log — converted from WP CPT mp_daily_log to relational table
+model DailyLog {
+  id          Int      @id @default(autoincrement())
+  authorId    Int      @map("author_id")
+  locationId  Int?     @map("location_id")
+  logDate     DateTime @map("log_date") @db.Date
+  timeSlotIds String?  @map("time_slot_ids") // comma-separated IDs
+  jobRoleId   Int?     @map("job_role_id")
+  tags        String?
+  blocksJson  String?  @map("blocks_json") // BlockNote JSON content
+  status      String   @default("publish") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([authorId, logDate])
+  @@index([locationId])
+  @@index([status])
+  @@map("mp_daily_logs")
+}
+
+// Daily log comments — converted from WP native comments
+model DailyLogComment {
+  id        Int      @id @default(autoincrement())
+  logId     Int      @map("log_id")
+  userId    Int      @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([logId])
+  @@index([userId])
+  @@map("mp_daily_log_comments")
+}
+
+// ============================================================
+// 2. PERMISSION TABLES
+// ============================================================
+
+model MpDailyLogPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("mp_daily_log_permissions")
+}
+
+model PgScanAuditPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_scan_audit_permissions")
+}
+
+model PgLiveDrillPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_live_drill_permissions")
+}
+
+model PgInservicePermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_inservice_permissions")
+}
+
+model PgCashierAuditPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_cashier_audit_permissions")
+}
+
+model PgInstructorEvaluationPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_instructor_evaluation_permissions")
+}
+
+model PgLessonManagementPermission {
+  id             Int      @id @default(autoincrement())
+  jobRoleId      Int      @unique @map("job_role_id")
+  canView        Boolean  @default(true)  @map("can_view")
+  canCreate      Boolean  @default(false) @map("can_create")
+  canEdit        Boolean  @default(false) @map("can_edit")
+  canDelete      Boolean  @default(false) @map("can_delete")
+  canModerateAll Boolean  @default(false) @map("can_moderate_all")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_lesson_management_permissions")
+}
+
+model PgTaskdeckPermission {
+  id                       Int      @id @default(autoincrement())
+  jobRoleId                Int      @unique @map("job_role_id")
+  canView                  Boolean  @default(true)  @map("can_view")
+  canViewOnlyAssigned      Boolean  @default(false) @map("can_view_only_assigned")
+  canCreate                Boolean  @default(false) @map("can_create")
+  canEdit                  Boolean  @default(false) @map("can_edit")
+  canDelete                Boolean  @default(false) @map("can_delete")
+  canModerateAll           Boolean  @default(false) @map("can_moderate_all")
+  canManagePrimaryDeck     Boolean  @default(false) @map("can_manage_primary_deck")
+  canManageAllPrimaryCards Boolean  @default(false) @map("can_manage_all_primary_cards")
+  canCreatePublicDecks     Boolean  @default(false) @map("can_create_public_decks")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_taskdeck_permissions")
+}
+
+model PgReportsPermission {
+  id               Int      @id @default(autoincrement())
+  jobRoleId        Int      @unique @map("job_role_id")
+  canViewAllRecords Boolean @default(false) @map("can_view_all_records")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("pg_reports_permissions")
+}
+
+model PgLmsPermission {
+  id                 Int      @id @default(autoincrement())
+  jobRoleId          Int      @unique @map("job_role_id")
+  canViewCourses     Boolean  @default(true)  @map("can_view_courses")
+  canViewLessons     Boolean  @default(true)  @map("can_view_lessons")
+  canCreateCourses   Boolean  @default(false) @map("can_create_courses")
+  canEditCourses     Boolean  @default(false) @map("can_edit_courses")
+  canDeleteCourses   Boolean  @default(false) @map("can_delete_courses")
+  canCreateLessons   Boolean  @default(false) @map("can_create_lessons")
+  canEditLessons     Boolean  @default(false) @map("can_edit_lessons")
+  canDeleteLessons   Boolean  @default(false) @map("can_delete_lessons")
+  canManageHotspots  Boolean  @default(false) @map("can_manage_hotspots")
+  canManageExcalidraw Boolean @default(false) @map("can_manage_excalidraw")
+  canModerateAll     Boolean  @default(false) @map("can_moderate_all")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([jobRoleId])
+  @@map("pg_lms_permissions")
+}
+
+model PgEmailPermission {
+  id                  Int      @id @default(autoincrement())
+  jobRoleId           Int      @unique @map("job_role_id")
+  canSendEmail        Boolean  @default(false) @map("can_send_email")
+  canManageTemplates  Boolean  @default(false) @map("can_manage_templates")
+  canViewHistory      Boolean  @default(false) @map("can_view_history")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([jobRoleId])
+  @@map("pg_email_permissions")
+}
+
+model SrmPermission {
+  id                  Int      @id @default(autoincrement())
+  jobRoleId           Int      @unique @map("job_role_id")
+  srmViewOwnPay       Boolean  @default(true)  @map("srm_view_own_pay")
+  srmViewAllPay       Boolean  @default(false) @map("srm_view_all_pay")
+  srmManagePayConfig  Boolean  @default(false) @map("srm_manage_pay_config")
+  srmSendInvites      Boolean  @default(false) @map("srm_send_invites")
+  srmViewResponses    Boolean  @default(false) @map("srm_view_responses")
+  srmManageStatus     Boolean  @default(false) @map("srm_manage_status")
+  srmManageTemplates  Boolean  @default(false) @map("srm_manage_templates")
+  srmViewRetention    Boolean  @default(false) @map("srm_view_retention")
+  srmBulkActions      Boolean  @default(false) @map("srm_bulk_actions")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@map("srm_permissions")
+}
+
+model AwesomeAwardsPermission {
+  id                Int      @id @default(autoincrement())
+  jobRoleId         Int      @unique @map("job_role_id")
+  canNominate       Boolean  @default(true)  @map("can_nominate")
+  canVote           Boolean  @default(false) @map("can_vote")
+  canApprove        Boolean  @default(false) @map("can_approve")
+  canDirectAssign   Boolean  @default(false) @map("can_direct_assign")
+  canManagePeriods  Boolean  @default(false) @map("can_manage_periods")
+  canViewNominations Boolean @default(true)  @map("can_view_nominations")
+  canViewWinners    Boolean  @default(true)  @map("can_view_winners")
+  canViewArchives   Boolean  @default(true)  @map("can_view_archives")
+  canArchive        Boolean  @default(false) @map("can_archive")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("awesome_awards_permissions")
+}
+
+model MpMileagePermission {
+  id        Int      @id @default(autoincrement())
+  jobRoleId Int      @unique @map("job_role_id")
+  canSubmit Boolean  @default(true)  @map("can_submit")
+  canViewAll Boolean @default(false) @map("can_view_all")
+  canManage Boolean  @default(false) @map("can_manage")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("mp_mileage_permissions")
+}
+
+model AquaticproCertPermission {
+  id               Int      @id @default(autoincrement())
+  jobRoleId        Int      @unique @map("job_role_id")
+  canViewAll       Boolean  @default(false) @map("can_view_all")
+  canEditRecords   Boolean  @default(false) @map("can_edit_records")
+  canManageTypes   Boolean  @default(false) @map("can_manage_types")
+  canApproveUploads Boolean @default(false) @map("can_approve_uploads")
+  canBulkEdit      Boolean  @default(false) @map("can_bulk_edit")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("aquaticpro_cert_permissions")
+}
+
+// ============================================================
+// 3. REACTIONS SYSTEM
+// ============================================================
+
+model MpDailyLogReaction {
+  id           Int      @id @default(autoincrement())
+  logId        Int      @map("log_id")
+  userId       Int      @map("user_id")
+  reactionType String   @map("reaction_type") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, logId])
+  @@index([logId])
+  @@index([userId])
+  @@map("mp_daily_log_reactions")
+}
+
+model MpCommentReaction {
+  id           Int      @id @default(autoincrement())
+  commentId    Int      @map("comment_id")
+  userId       Int      @map("user_id")
+  reactionType String   @map("reaction_type") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("mp_comment_reactions")
+}
+
+model AqpUnifiedReaction {
+  id           Int      @id @default(autoincrement())
+  objectId     Int      @map("object_id")
+  objectType   String   @map("object_type") @db.VarChar(50)
+  userId       Int      @map("user_id")
+  reactionType String   @map("reaction_type") @db.VarChar(20)
+  itemAuthorId Int      @default(0) @map("item_author_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, objectId, objectType])
+  @@index([objectId, objectType])
+  @@index([userId])
+  @@index([itemAuthorId])
+  @@map("aqp_unified_reactions")
+}
+
+model AqpCardCommentReaction {
+  id           Int      @id @default(autoincrement())
+  commentId    Int      @map("comment_id")
+  userId       Int      @map("user_id")
+  reactionType String   @map("reaction_type") @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("aqp_card_comment_reactions")
+}
+
+// ============================================================
+// 4. AWESOME AWARDS MODULE
+// ============================================================
+
+model AwesomeAwardsPeriod {
+  id                      Int      @id @default(autoincrement())
+  name                    String?  @db.VarChar(255)
+  periodType              String   @map("period_type") @db.VarChar(10)
+  startDate               DateTime @map("start_date") @db.Date
+  endDate                 DateTime @map("end_date") @db.Date
+  votingStart             DateTime? @map("voting_start") @db.Date
+  votingEnd               DateTime? @map("voting_end") @db.Date
+  nominationDeadline      DateTime? @map("nomination_deadline")
+  status                  String   @default("draft") @db.VarChar(50)
+  archived                Boolean  @default(false)
+  maxWinners              Int      @default(1) @map("max_winners")
+  allowPreVoting          Boolean  @default(false) @map("allow_pre_voting")
+  createdBy               Int?     @map("created_by")
+  tasklistId              Int?     @map("tasklist_id")
+  taskdeckEnabled         Boolean  @default(false) @map("taskdeck_enabled")
+  nominationReminderRoles String?  @map("nomination_reminder_roles")
+  votingReminderRoles     String?  @map("voting_reminder_roles")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([archived])
+  @@map("awesome_awards_periods")
+}
+
+model AwesomeAwardsCategory {
+  id               Int      @id @default(autoincrement())
+  periodId         Int      @map("period_id")
+  name             String   @db.VarChar(255)
+  description      String?
+  prizeDescription String?
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([periodId])
+  @@map("awesome_awards_categories")
+}
+
+model AwesomeAwardsNomination {
+  id                 Int      @id @default(autoincrement())
+  periodId           Int      @map("period_id")
+  categoryId         Int      @default(0) @map("category_id")
+  category           String   @default("") @db.VarChar(255)
+  nomineeId          Int      @map("nominee_id")
+  nominatorId        Int      @map("nominator_id")
+  reason             String?
+  reasonJson         String?  @map("reason_json")
+  reasonText         String?  @map("reason_text")
+  isAnonymous        Boolean  @default(false) @map("is_anonymous")
+  isDirectAssignment Boolean  @default(false) @map("is_direct_assignment")
+  isWinner           Boolean  @default(false) @map("is_winner")
+  status             String   @default("pending") @db.VarChar(50)
+  rejectionReason    String?  @map("rejection_reason")
+  voteCount          Int      @default(0) @map("vote_count")
+  editedAt           DateTime? @map("edited_at")
+  archived           Boolean  @default(false)
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@index([periodId])
+  @@index([categoryId])
+  @@index([nomineeId])
+  @@index([nominatorId])
+  @@index([status])
+  @@index([isWinner])
+  @@index([archived])
+  @@map("awesome_awards_nominations")
+}
+
+model AwesomeAwardsVote {
+  id           Int      @id @default(autoincrement())
+  nominationId Int      @map("nomination_id")
+  voterId      Int      @map("voter_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([nominationId, voterId])
+  @@index([nominationId])
+  @@index([voterId])
+  @@map("awesome_awards_votes")
+}
+
+model AwesomeAwardsAnnouncementSeen {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  nominationId     Int      @map("nomination_id")
+  announcementType String   @map("announcement_type") @db.VarChar(20)
+  seenAt           DateTime @default(now()) @map("seen_at")
+
+  @@unique([userId, nominationId, announcementType])
+  @@index([userId])
+  @@index([nominationId])
+  @@map("awesome_awards_announcements_seen")
+}
+
+model AwesomeAwardsTaskdeckCard {
+  id           Int      @id @default(autoincrement())
+  periodId     Int      @map("period_id")
+  cardType     String   @default("nomination") @map("card_type") @db.VarChar(20)
+  cardId       Int      @map("card_id")
+  assignedRoles String? @map("assigned_roles")
+  isCompleted  Boolean  @default(false) @map("is_completed")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@unique([periodId, cardType])
+  @@index([cardId])
+  @@index([isCompleted])
+  @@map("awesome_awards_taskdeck_cards")
+}
+
+// ============================================================
+// 5. SEASONAL RETURNS & PAY MANAGEMENT (SRM)
+// ============================================================
+
+model SrmPayConfig {
+  id             Int      @id @default(autoincrement())
+  configType     String   @map("config_type") @db.VarChar(50)
+  name           String   @db.VarChar(255)
+  amount         Decimal  @default(0.00) @db.Decimal(10, 2)
+  jobRoleId      Int?     @map("job_role_id")
+  longevityYears Int?     @map("longevity_years")
+  startDate      DateTime? @map("start_date") @db.Date
+  endDate        DateTime? @map("end_date") @db.Date
+  expirationDate DateTime? @map("expiration_date") @db.Date
+  isRecurring    Boolean  @default(false) @map("is_recurring")
+  isActive       Boolean  @default(true) @map("is_active")
+  effectiveDate  DateTime @map("effective_date") @db.Date
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([configType])
+  @@index([isActive])
+  @@index([jobRoleId])
+  @@index([effectiveDate])
+  @@index([expirationDate])
+  @@map("srm_pay_config")
+}
+
+model SrmSeason {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  year       Int
+  seasonType String   @default("summer") @map("season_type") @db.VarChar(50)
+  startDate  DateTime @map("start_date") @db.Date
+  endDate    DateTime @map("end_date") @db.Date
+  isActive   Boolean  @default(false) @map("is_active")
+  isCurrent  Boolean  @default(false) @map("is_current")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([isCurrent])
+  @@index([year])
+  @@index([startDate, endDate])
+  @@map("srm_seasons")
+}
+
+model SrmEmployeeSeason {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  seasonId         Int      @map("season_id")
+  status           String   @default("pending") @db.VarChar(30)
+  eligibleForRehire Boolean @default(true) @map("eligible_for_rehire")
+  isArchived       Boolean  @default(false) @map("is_archived")
+  isNewHire        Boolean  @default(false) @map("is_new_hire")
+  returnToken      String?  @map("return_token") @db.VarChar(64)
+  tokenExpiresAt   DateTime? @map("token_expires_at")
+  responseDate     DateTime? @map("response_date")
+  signatureText    String?  @map("signature_text") @db.VarChar(255)
+  comments         String?
+  longevityYears   Int      @default(0) @map("longevity_years")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, seasonId])
+  @@index([userId])
+  @@index([seasonId])
+  @@index([status])
+  @@index([returnToken])
+  @@index([eligibleForRehire])
+  @@index([isArchived])
+  @@index([updatedAt])
+  @@map("srm_employee_seasons")
+}
+
+model SrmEmailTemplate {
+  id           Int      @id @default(autoincrement())
+  name         String   @db.VarChar(255)
+  subject      String   @db.VarChar(255)
+  bodyHtml     String   @map("body_html")
+  bodyJson     String?  @map("body_json")
+  templateType String   @default("custom") @map("template_type") @db.VarChar(30)
+  isDefault    Boolean  @default(false) @map("is_default")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([templateType])
+  @@index([isDefault])
+  @@map("srm_email_templates")
+}
+
+model SrmEmailLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  seasonId   Int      @map("season_id")
+  templateId Int?     @map("template_id")
+  emailType  String   @default("initial") @map("email_type") @db.VarChar(30)
+  sentAt     DateTime @default(now()) @map("sent_at")
+  openedAt   DateTime? @map("opened_at")
+  clickedAt  DateTime? @map("clicked_at")
+  sentBy     Int      @map("sent_by")
+
+  @@index([userId])
+  @@index([seasonId])
+  @@index([sentAt])
+  @@map("srm_email_log")
+}
+
+model SrmRetentionStats {
+  id               Int      @id @default(autoincrement())
+  seasonId         Int      @map("season_id")
+  totalEligible    Int      @default(0) @map("total_eligible")
+  totalInvited     Int      @default(0) @map("total_invited")
+  totalReturning   Int      @default(0) @map("total_returning")
+  totalNotReturning Int     @default(0) @map("total_not_returning")
+  totalPending     Int      @default(0) @map("total_pending")
+  totalIneligible  Int      @default(0) @map("total_ineligible")
+  totalNewHires    Int      @default(0) @map("total_new_hires")
+  retentionRate    Decimal  @default(0.00) @map("retention_rate") @db.Decimal(5, 2)
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+
+  @@index([seasonId])
+  @@index([calculatedAt])
+  @@map("srm_retention_stats")
+}
+
+model SrmLongevityRate {
+  id        Int      @id @default(autoincrement())
+  workYear  Int      @unique @map("work_year")
+  rate      Decimal  @db.Decimal(10, 2)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([workYear])
+  @@map("srm_longevity_rates")
+}
+
+model SrmEmployeeWorkYear {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  workYear   Int      @map("work_year")
+  verified   Boolean  @default(false)
+  verifiedBy Int?     @map("verified_by")
+  verifiedAt DateTime? @map("verified_at")
+  notes      String?
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, workYear])
+  @@index([userId])
+  @@index([workYear])
+  @@index([verified])
+  @@map("srm_employee_work_years")
+}
+
+model SrmPayCache {
+  userId         Int      @id @map("user_id")
+  payData        String   @map("pay_data")
+  projectedData  String?  @map("projected_data")
+  calculatedAt   DateTime @default(now()) @map("calculated_at")
+
+  @@index([calculatedAt])
+  @@map("srm_pay_cache")
+}
+
+// ============================================================
+// 6. PROFESSIONAL GROWTH MODULE
+// ============================================================
+
+model PgJobRole {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(100)
+  tier            Int
+  description     String?
+  inserviceHours  Decimal  @default(4.00) @map("inservice_hours") @db.Decimal(4, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([tier])
+  @@map("pg_job_roles")
+}
+
+model PgLocation {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("pg_locations")
+}
+
+model PgUserJobAssignment {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  jobRoleId    Int      @map("job_role_id")
+  assignedBy   Int?     @map("assigned_by")
+  assignedDate DateTime @default(now()) @map("assigned_date")
+  syncWpRole   Boolean  @default(true) @map("sync_wp_role")
+  notes        String?
+  isPrimary    Boolean  @default(false) @map("is_primary")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, jobRoleId])
+  @@index([userId])
+  @@index([jobRoleId])
+  @@index([assignedBy])
+  @@index([userId, isPrimary])
+  @@index([jobRoleId, isPrimary])
+  @@map("pg_user_job_assignments")
+}
+
+model PgUserMetadata {
+  userId           Int      @id @map("user_id")
+  phoneNumber      String?  @map("phone_number") @db.VarChar(20)
+  employeeId       String?  @map("employee_id") @db.VarChar(50)
+  hireDate         DateTime? @map("hire_date") @db.Date
+  notes            String?
+  eligibleForRehire Boolean @default(true) @map("eligible_for_rehire")
+  isMember         Boolean? @map("is_member")
+  archived         Boolean  @default(false)
+  archivedDate     DateTime? @map("archived_date")
+  archivedBy       Int?     @map("archived_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([archived])
+  @@index([isMember])
+  @@index([hireDate])
+  @@index([employeeId])
+  @@map("pg_user_metadata")
+}
+
+model PgPromotionCriterion {
+  id            Int      @id @default(autoincrement())
+  jobRoleId     Int      @map("job_role_id")
+  title         String   @db.VarChar(255)
+  description   String?
+  criterionType String   @map("criterion_type") @db.VarChar(50)
+  targetValue   Int      @default(1) @map("target_value")
+  linkedModule  String?  @map("linked_module") @db.VarChar(50)
+  sortOrder     Int      @default(0) @map("sort_order")
+  isRequired    Boolean  @default(true) @map("is_required")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([jobRoleId])
+  @@map("pg_promotion_criteria")
+}
+
+model PgUserProgress {
+  id             Int      @id @default(autoincrement())
+  userId         Int      @map("user_id")
+  criterionId    Int      @map("criterion_id")
+  currentValue   Int      @default(0) @map("current_value")
+  isCompleted    Boolean  @default(false) @map("is_completed")
+  completionDate DateTime? @map("completion_date")
+  approvedBy     Int?     @map("approved_by")
+  notes          String?
+  fileUrl        String?  @map("file_url") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, criterionId])
+  @@index([userId])
+  @@index([criterionId])
+  @@map("pg_user_progress")
+}
+
+model PgCriterionActivity {
+  id             Int      @id @default(autoincrement())
+  criterionId    Int      @map("criterion_id")
+  userId         Int      @map("user_id")
+  affectedUserId Int      @map("affected_user_id")
+  userJobRoleId  Int?     @map("user_job_role_id")
+  activityType   String   @map("activity_type") @db.VarChar(50)
+  content        String?
+  oldValue       String?  @map("old_value") @db.VarChar(255)
+  newValue       String?  @map("new_value") @db.VarChar(255)
+  createdAt      DateTime @default(now()) @map("created_at")
+  editedAt       DateTime? @map("edited_at")
+  editedBy       Int?     @map("edited_by")
+
+  @@index([criterionId])
+  @@index([userId])
+  @@index([affectedUserId])
+  @@index([createdAt])
+  @@map("pg_criterion_activities")
+}
+
+model PgInserviceLog {
+  id            Int      @id @default(autoincrement())
+  trainingDate  DateTime @map("training_date") @db.Date
+  trainingTime  String?  @map("training_time") @db.VarChar(8)
+  location      String?  @db.VarChar(255)
+  durationHours Decimal  @map("duration_hours") @db.Decimal(4, 2)
+  topic         String   @db.VarChar(255)
+  details       String?
+  archived      Boolean  @default(false)
+  createdBy     Int      @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([trainingDate])
+  @@index([createdBy])
+  @@index([archived])
+  @@index([createdBy, trainingDate])
+  @@index([archived, trainingDate])
+  @@map("pg_inservice_logs")
+}
+
+model PgInserviceAttendee {
+  id               Int      @id @default(autoincrement())
+  inserviceId      Int      @map("inservice_id")
+  userId           Int      @map("user_id")
+  attendanceStatus String   @map("attendance_status") @db.VarChar(20)
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@unique([inserviceId, userId])
+  @@index([inserviceId])
+  @@index([userId])
+  @@index([attendanceStatus])
+  @@map("pg_inservice_attendees")
+}
+
+model PgInserviceJobRole {
+  id          Int      @id @default(autoincrement())
+  inserviceId Int      @map("inservice_id")
+  jobRoleId   Int      @map("job_role_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([inserviceId, jobRoleId])
+  @@index([inserviceId])
+  @@index([jobRoleId])
+  @@map("pg_inservice_job_roles")
+}
+
+model PgInserviceCache {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  month            String   @db.VarChar(7)
+  totalHours       Decimal  @default(0) @map("total_hours") @db.Decimal(5, 2)
+  requiredHours    Decimal  @default(4) @map("required_hours") @db.Decimal(5, 2)
+  meetsRequirement Boolean  @default(false) @map("meets_requirement")
+  trainingCount    Int      @default(0) @map("training_count")
+  calculatedAt     DateTime @default(now()) @map("calculated_at")
+
+  @@unique([userId, month])
+  @@index([month])
+  @@index([calculatedAt])
+  @@map("pg_inservice_cache")
+}
+
+model PgScanAuditLog {
+  id                     Int      @id @default(autoincrement())
+  auditedUserId          Int      @map("audited_user_id")
+  auditorId              Int      @map("auditor_id")
+  auditDate              DateTime @map("audit_date")
+  location               String?  @db.VarChar(255)
+  result                 String   @db.VarChar(20)
+  notes                  String?
+  wearingCorrectUniform  Boolean? @map("wearing_correct_uniform")
+  attentiveToZone        Boolean? @map("attentive_to_zone")
+  postureAdjustment5min  Boolean? @map("posture_adjustment_5min")
+  attachments            String?
+  archived               Boolean  @default(false)
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  @@index([auditedUserId])
+  @@index([auditorId])
+  @@index([auditDate])
+  @@index([archived])
+  @@map("pg_scan_audit_logs")
+}
+
+model PgCashierAuditLog {
+  id                        Int      @id @default(autoincrement())
+  auditedUserId             Int      @map("audited_user_id")
+  auditorId                 Int      @map("auditor_id")
+  auditDate                 DateTime @map("audit_date")
+  checkedCashDrawer         String?  @map("checked_cash_drawer") @db.VarChar(20)
+  attentivePatronsEntered   String?  @map("attentive_patrons_entered") @db.VarChar(20)
+  greetedWithDemeanor       String?  @map("greeted_with_demeanor") @db.VarChar(20)
+  oneClickPerPerson         String?  @map("one_click_per_person") @db.VarChar(20)
+  poolPassProcess           String?  @map("pool_pass_process") @db.VarChar(20)
+  resolvedPatronConcerns    String?  @map("resolved_patron_concerns")
+  notes                     String?
+  archived                  Boolean  @default(false)
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@index([auditedUserId])
+  @@index([auditorId])
+  @@index([auditDate])
+  @@index([archived])
+  @@map("pg_cashier_audit_logs")
+}
+
+model PgLiveRecognitionDrillLog {
+  id               Int      @id @default(autoincrement())
+  drilledUserId    Int      @map("drilled_user_id")
+  drillConductorId Int      @map("drill_conductor_id")
+  drillDate        DateTime @map("drill_date")
+  location         String?  @db.VarChar(255)
+  result           String   @db.VarChar(50)
+  notes            String?
+  archived         Boolean  @default(false)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([drilledUserId])
+  @@index([drillConductorId])
+  @@index([drillDate])
+  @@index([archived])
+  @@map("pg_live_recognition_drill_logs")
+}
+
+model PgInstructorEvaluationLog {
+  id                  Int      @id @default(autoincrement())
+  evaluatedUserId     Int      @map("evaluated_user_id")
+  evaluatorId         Int      @map("evaluator_id")
+  evaluationDate      DateTime @map("evaluation_date")
+  commandLanguage     Boolean? @map("command_language")
+  minimizingDowntime  Boolean? @map("minimizing_downtime")
+  periodicChallenges  Boolean? @map("periodic_challenges")
+  providesFeedback    Boolean? @map("provides_feedback")
+  rulesExpectations   Boolean? @map("rules_expectations")
+  learningEnvironment Boolean? @map("learning_environment")
+  comments            String
+  archived            Boolean  @default(false)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([evaluatedUserId])
+  @@index([evaluatorId])
+  @@index([evaluationDate])
+  @@index([archived])
+  @@map("pg_instructor_evaluation_logs")
+}
+
+// ============================================================
+// 7. TASKDECK MODULE
+// ============================================================
+
+model AqpTaskdeck {
+  id              Int      @id @default(autoincrement()) @map("deck_id")
+  deckName        String   @map("deck_name") @db.VarChar(255)
+  deckDescription String?  @map("deck_description")
+  createdBy       Int      @map("created_by")
+  isPublic        Boolean  @default(false) @map("is_public")
+  isPrimary       Boolean  @default(false) @map("is_primary")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  isArchived      Boolean  @default(false) @map("is_archived")
+
+  @@index([createdBy])
+  @@index([isArchived])
+  @@index([isPublic])
+  @@index([isPrimary])
+  @@map("aqp_taskdecks")
+}
+
+model AqpTasklist {
+  id        Int      @id @default(autoincrement()) @map("list_id")
+  deckId    Int      @map("deck_id")
+  listName  String   @map("list_name") @db.VarChar(255)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([deckId])
+  @@index([sortOrder])
+  @@index([deckId, sortOrder])
+  @@map("aqp_tasklists")
+}
+
+model AqpTaskcard {
+  id               Int      @id @default(autoincrement()) @map("card_id")
+  listId           Int      @map("list_id")
+  title            String   @db.VarChar(500)
+  description      String?
+  actionUrl        String?  @map("action_url") @db.VarChar(500)
+  createdBy        Int      @map("created_by")
+  assignedTo       Int?     @map("assigned_to")
+  assignedToRoleId Int?     @map("assigned_to_role_id")
+  locationId       Int?     @map("location_id")
+  dueDate          DateTime? @map("due_date")
+  categoryTag      String?  @map("category_tag") @db.VarChar(100)
+  accentColor      String?  @map("accent_color") @db.VarChar(7)
+  isComplete       Boolean  @default(false) @map("is_complete")
+  sortOrder        Int      @default(0) @map("sort_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([listId])
+  @@index([createdBy])
+  @@index([assignedTo])
+  @@index([assignedToRoleId])
+  @@index([locationId])
+  @@index([sortOrder])
+  @@index([isComplete])
+  @@index([listId, isComplete])
+  @@index([listId, sortOrder])
+  @@index([isComplete, updatedAt])
+  @@map("aqp_taskcards")
+}
+
+model AqpCardAssignee {
+  id         Int      @id @default(autoincrement())
+  cardId     Int      @map("card_id")
+  userId     Int      @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedBy Int?     @map("assigned_by")
+
+  @@unique([cardId, userId])
+  @@index([cardId])
+  @@index([userId])
+  @@index([userId, cardId])
+  @@map("aqp_card_assignees")
+}
+
+model AqpCardAssignedRole {
+  id         Int      @id @default(autoincrement())
+  cardId     Int      @map("card_id")
+  roleId     Int      @map("role_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  assignedBy Int?     @map("assigned_by")
+
+  @@unique([cardId, roleId])
+  @@index([cardId])
+  @@index([roleId])
+  @@index([roleId, cardId])
+  @@map("aqp_card_assigned_roles")
+}
+
+model AqpCardComment {
+  id          Int      @id @default(autoincrement()) @map("comment_id")
+  cardId      Int      @map("card_id")
+  userId      Int      @map("user_id")
+  commentText String   @map("comment_text")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@index([userId])
+  @@map("aqp_card_comments")
+}
+
+model AqpCardAttachment {
+  id              Int      @id @default(autoincrement()) @map("attachment_id")
+  cardId          Int      @map("card_id")
+  userId          Int      @map("user_id")
+  fileName        String   @map("file_name") @db.VarChar(255)
+  wpAttachmentId  Int      @map("wp_attachment_id")
+  uploadedAt      DateTime @default(now()) @map("uploaded_at")
+
+  @@index([cardId])
+  @@index([userId])
+  @@index([wpAttachmentId])
+  @@map("aqp_card_attachments")
+}
+
+model AqpCardChecklist {
+  id          Int      @id @default(autoincrement()) @map("checklist_id")
+  cardId      Int      @map("card_id")
+  itemText    String   @map("item_text") @db.VarChar(500)
+  isComplete  Boolean  @default(false) @map("is_complete")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@index([sortOrder])
+  @@map("aqp_card_checklists")
+}
+
+model AqpActivityLog {
+  id        Int      @id @default(autoincrement()) @map("log_id")
+  cardId    Int      @map("card_id")
+  userId    Int      @map("user_id")
+  action    String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([cardId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("aqp_activity_log")
+}
+
+// ============================================================
+// 8. LMS (LEARNING MANAGEMENT SYSTEM)
+// ============================================================
+
+model AquaticproCourse {
+  id           Int      @id @default(autoincrement())
+  title        String   @db.VarChar(255)
+  description  String?
+  featuredImage String? @map("featured_image")
+  category     String?  @db.VarChar(100)
+  isSequential Boolean  @default(false) @map("is_sequential")
+  status       String   @default("draft") @db.VarChar(20)
+  displayOrder Int      @default(0) @map("display_order")
+  createdBy    Int      @map("created_by")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([displayOrder])
+  @@index([category])
+  @@map("aquaticpro_courses")
+}
+
+model AquaticproLesson {
+  id            Int      @id @default(autoincrement())
+  courseId      Int      @map("course_id")
+  sectionId     Int?     @map("section_id")
+  title         String   @db.VarChar(255)
+  description   String?
+  content       String?
+  lessonType    String   @default("content") @map("lesson_type") @db.VarChar(20)
+  featuredImage String?  @map("featured_image")
+  excalidrawJson String? @map("excalidraw_json")
+  scrollCues    String?  @map("scroll_cues")
+  slideOrder    String?  @map("slide_order")
+  hybridLayout  String   @default("text-left") @map("hybrid_layout") @db.VarChar(20)
+  splitRatio    Float    @default(0.4) @map("split_ratio")
+  estimatedTime String?  @map("estimated_time") @db.VarChar(50)
+  displayOrder  Int      @default(0) @map("display_order")
+  createdBy     Int      @map("created_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([courseId])
+  @@index([sectionId])
+  @@index([displayOrder])
+  @@map("aquaticpro_lessons")
+}
+
+model AquaticproLessonSection {
+  id           Int      @id @default(autoincrement())
+  courseId     Int      @map("course_id")
+  title        String   @db.VarChar(255)
+  description  String?
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([courseId])
+  @@index([displayOrder])
+  @@map("aquaticpro_lesson_sections")
+}
+
+model AquaticproProgress {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  lessonId         Int      @map("lesson_id")
+  status           String   @default("not-started") @db.VarChar(20)
+  score            Float    @default(0)
+  lastViewed       DateTime? @map("last_viewed")
+  completedAt      DateTime? @map("completed_at")
+  timeSpentSeconds Int      @default(0) @map("time_spent_seconds")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([status])
+  @@map("aquaticpro_progress")
+}
+
+model AquaticproCourseCategory {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique @db.VarChar(100)
+  displayOrder Int      @default(0) @map("display_order")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([displayOrder])
+  @@map("aquaticpro_course_categories")
+}
+
+// ============================================================
+// 9. WHITEBOARD / LESSON BUILDER
+// ============================================================
+
+model MpWbLessonSection {
+  id                Int      @id @default(autoincrement())
+  lessonId          Int      @map("lesson_id")
+  sectionType       String   @default("whiteboard") @map("section_type") @db.VarChar(20)
+  title             String   @db.VarChar(255)
+  description       String?
+  displayOrder      Int      @default(0) @map("display_order")
+  isRequired        Boolean  @default(true) @map("is_required")
+  requiresSectionId Int?     @map("requires_section_id")
+  unlockAfterMinutes Int?    @map("unlock_after_minutes")
+  videoUrl          String?  @map("video_url")
+  textContent       String?  @map("text_content")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@index([lessonId])
+  @@index([displayOrder])
+  @@index([sectionType])
+  @@map("mp_wb_lesson_sections")
+}
+
+model MpWbWhiteboard {
+  id              Int      @id @default(autoincrement())
+  lessonSectionId Int      @map("lesson_section_id")
+  title           String   @default("Untitled") @db.VarChar(255)
+  data            String
+  thumbnailUrl    String?  @map("thumbnail_url")
+  displayOrder    Int      @default(0) @map("display_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([lessonSectionId])
+  @@index([displayOrder])
+  @@map("mp_wb_whiteboards")
+}
+
+model MpWbQuiz {
+  id                 Int      @id @default(autoincrement())
+  lessonSectionId    Int      @unique @map("lesson_section_id")
+  title              String   @db.VarChar(255)
+  description        String?
+  timeLimitMinutes   Int?     @map("time_limit_minutes")
+  passingScore       Int      @default(70) @map("passing_score")
+  maxAttempts        Int?     @map("max_attempts")
+  shuffleQuestions   Boolean  @default(false) @map("shuffle_questions")
+  shuffleOptions     Boolean  @default(false) @map("shuffle_options")
+  showCorrectAnswers String   @default("after_attempt") @map("show_correct_answers") @db.VarChar(20)
+  allowReview        Boolean  @default(true) @map("allow_review")
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("mp_wb_quizzes")
+}
+
+model MpWbQuizQuestion {
+  id               Int      @id @default(autoincrement())
+  quizId           Int      @map("quiz_id")
+  questionType     String   @default("multiple-choice") @map("question_type") @db.VarChar(30)
+  questionText     String   @map("question_text")
+  questionImageUrl String?  @map("question_image_url")
+  questionData     String   @map("question_data")
+  explanation      String?
+  points           Int      @default(1)
+  displayOrder     Int      @default(0) @map("display_order")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([quizId])
+  @@index([displayOrder])
+  @@map("mp_wb_quiz_questions")
+}
+
+model MpWbLessonProgress {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @map("user_id")
+  lessonId         Int      @map("lesson_id")
+  status           String   @default("not_started") @db.VarChar(20)
+  currentSectionId Int?     @map("current_section_id")
+  timeSpentSeconds Int      @default(0) @map("time_spent_seconds")
+  startedAt        DateTime? @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+  lastAccessedAt   DateTime @default(now()) @map("last_accessed_at")
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+  @@index([status])
+  @@map("mp_wb_lesson_progress")
+}
+
+model MpWbSectionProgress {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  lessonSectionId Int      @map("lesson_section_id")
+  status          String   @default("not_started") @db.VarChar(20)
+  timeSpentSeconds Int     @default(0) @map("time_spent_seconds")
+  completedAt     DateTime? @map("completed_at")
+  quizScore       Decimal? @map("quiz_score") @db.Decimal(5, 2)
+  quizPassed      Boolean? @map("quiz_passed")
+  quizAttempts    Int      @default(0) @map("quiz_attempts")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, lessonSectionId])
+  @@index([userId])
+  @@index([lessonSectionId])
+  @@map("mp_wb_section_progress")
+}
+
+model MpWbQuizAttempt {
+  id              Int      @id @default(autoincrement())
+  userId          Int      @map("user_id")
+  quizId          Int      @map("quiz_id")
+  lessonSectionId Int      @map("lesson_section_id")
+  score           Decimal  @db.Decimal(5, 2)
+  totalPoints     Int      @map("total_points")
+  percentage      Decimal  @db.Decimal(5, 2)
+  passed          Boolean
+  answers         String
+  timeTakenSeconds Int     @default(0) @map("time_taken_seconds")
+  startedAt       DateTime @map("started_at")
+  submittedAt     DateTime @default(now()) @map("submitted_at")
+
+  @@index([userId])
+  @@index([quizId])
+  @@index([lessonSectionId])
+  @@index([submittedAt])
+  @@map("mp_wb_quiz_attempts")
+}
+
+// ============================================================
+// 10. LMS ASSIGNMENTS
+// ============================================================
+
+model AquaticproLearningAssignment {
+  id              Int      @id @default(autoincrement())
+  lessonId        Int      @map("lesson_id")
+  assignedBy      Int      @map("assigned_by")
+  title           String   @db.VarChar(255)
+  description     String?
+  dueDate         DateTime? @map("due_date")
+  status          String   @default("draft") @db.VarChar(20)
+  taskdeckCardId  Int?     @map("taskdeck_card_id")
+  reminderSentAt  DateTime? @map("reminder_sent_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([lessonId])
+  @@index([assignedBy])
+  @@index([status])
+  @@index([dueDate])
+  @@map("aquaticpro_learning_assignments")
+}
+
+model AquaticproLearningAssignmentUser {
+  id             Int      @id @default(autoincrement())
+  assignmentId   Int      @map("assignment_id")
+  userId         Int      @map("user_id")
+  source         String   @default("direct") @db.VarChar(20)
+  sourceRoleId   Int?     @map("source_role_id")
+  emailSentAt    DateTime? @map("email_sent_at")
+  emailStatus    String   @default("pending") @map("email_status") @db.VarChar(20)
+  reminderSentAt DateTime? @map("reminder_sent_at")
+  progressStatus String   @default("not-started") @map("progress_status") @db.VarChar(20)
+  quizScore      Float?   @map("quiz_score")
+  startedAt      DateTime? @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@unique([assignmentId, userId])
+  @@index([assignmentId])
+  @@index([userId])
+  @@index([progressStatus])
+  @@index([emailStatus])
+  @@map("aquaticpro_learning_assignment_users")
+}
+
+model AquaticproEmailQueue {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  emailType String   @map("email_type") @db.VarChar(50)
+  subject   String   @db.VarChar(255)
+  body      String
+  contextId Int?     @map("context_id")
+  status    String   @default("pending") @db.VarChar(20)
+  attempts  Int      @default(0)
+  sentAt    DateTime? @map("sent_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status])
+  @@index([emailType])
+  @@map("aquaticpro_email_queue")
+}
+
+// ============================================================
+// 11. LMS AUTO-ASSIGN RULES
+// ============================================================
+
+model AquaticproCourseAutoAssignRule {
+  id               Int      @id @default(autoincrement())
+  courseId         Int      @map("course_id")
+  jobRoleId        Int      @map("job_role_id")
+  sendNotification Boolean  @default(true) @map("send_notification")
+  createdBy        Int      @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@unique([courseId, jobRoleId])
+  @@index([courseId])
+  @@index([jobRoleId])
+  @@map("aquaticpro_course_auto_assign_rules")
+}
+
+model AquaticproCourseAssignment {
+  id           Int      @id @default(autoincrement())
+  courseId     Int      @map("course_id")
+  userId       Int      @map("user_id")
+  ruleId       Int?     @map("rule_id")
+  source       String   @default("auto") @db.VarChar(20)
+  sourceRoleId Int?     @map("source_role_id")
+  assignedBy   Int?     @map("assigned_by")
+  status       String   @default("assigned") @db.VarChar(20)
+  dueDate      DateTime? @map("due_date")
+  assignedAt   DateTime @default(now()) @map("assigned_at")
+  completedAt  DateTime? @map("completed_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@unique([courseId, userId])
+  @@index([courseId])
+  @@index([userId])
+  @@index([ruleId])
+  @@index([status])
+  @@map("aquaticpro_course_assignments")
+}
+
+// ============================================================
+// 12. MILEAGE REIMBURSEMENT
+// ============================================================
+
+model MpMileageSetting {
+  id           Int      @id @default(autoincrement())
+  settingKey   String   @unique @map("setting_key") @db.VarChar(100)
+  settingValue String?  @map("setting_value")
+  updatedBy    Int?     @map("updated_by")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("mp_mileage_settings")
+}
+
+model MpMileageLocation {
+  id         Int      @id @default(autoincrement())
+  name       String   @db.VarChar(255)
+  address    String   @db.VarChar(500)
+  latitude   Decimal? @db.Decimal(10, 8)
+  longitude  Decimal? @db.Decimal(11, 8)
+  isActive   Boolean  @default(true) @map("is_active")
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdBy  Int?     @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("mp_mileage_locations")
+}
+
+model MpMileageBudgetAccount {
+  id          Int      @id @default(autoincrement())
+  accountCode String   @map("account_code") @db.VarChar(50)
+  accountName String   @map("account_name") @db.VarChar(255)
+  isActive    Boolean  @default(true) @map("is_active")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("mp_mileage_budget_accounts")
+}
+
+model MpMileageEntry {
+  id                    Int      @id @default(autoincrement())
+  userId                Int      @map("user_id")
+  tripDate              DateTime @map("trip_date") @db.Date
+  businessPurpose       String?  @map("business_purpose") @db.VarChar(500)
+  odometerStart         Int?     @map("odometer_start")
+  odometerEnd           Int?     @map("odometer_end")
+  calculatedMiles       Int      @default(0) @map("calculated_miles")
+  routeJson             String?  @map("route_json")
+  tolls                 Decimal  @default(0.00) @db.Decimal(10, 2)
+  parking               Decimal  @default(0.00) @db.Decimal(10, 2)
+  budgetAccountId       Int?     @map("budget_account_id")
+  notes                 String?
+  submittedForPayment   Boolean  @default(false) @map("submitted_for_payment")
+  submittedAt           DateTime? @map("submitted_at")
+  submittedBy           Int?     @map("submitted_by")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, tripDate])
+  @@index([tripDate])
+  @@index([submittedForPayment])
+  @@map("mp_mileage_entries")
+}
+
+model MpMileageEntryStop {
+  id              Int      @id @default(autoincrement())
+  entryId         Int      @map("entry_id")
+  stopOrder       Int      @map("stop_order")
+  locationId      Int?     @map("location_id")
+  customAddress   String?  @map("custom_address") @db.VarChar(500)
+  distanceToNext  Int      @default(0) @map("distance_to_next")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([entryId])
+  @@map("mp_mileage_entry_stops")
+}
+
+// ============================================================
+// 13. EMAIL COMPOSER
+// ============================================================
+
+model AquaticproEmailComposerTemplate {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(255)
+  subject   String   @default("") @db.VarChar(255)
+  bodyJson  String?  @map("body_json")
+  bodyHtml  String?  @map("body_html")
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([createdBy])
+  @@map("aquaticpro_email_composer_templates")
+}
+
+model AquaticproEmailComposerLog {
+  id               Int      @id @default(autoincrement())
+  subject          String   @db.VarChar(255)
+  bodyHtml         String?  @map("body_html")
+  recipientCount   Int      @default(0) @map("recipient_count")
+  sentBy           Int      @map("sent_by")
+  sentAt           DateTime @default(now()) @map("sent_at")
+  recipientSummary String?  @map("recipient_summary")
+
+  @@index([sentBy])
+  @@index([sentAt])
+  @@map("aquaticpro_email_composer_log")
+}
+
+// ============================================================
+// 14. CERTIFICATE TRACKING
+// ============================================================
+
+model AquaticproCertificateType {
+  id                   Int      @id @default(autoincrement())
+  name                 String   @db.VarChar(255)
+  description          String?
+  defaultExpiryMonths  Int?     @map("default_expiry_months")
+  trainingLink         String   @default("") @map("training_link") @db.VarChar(2083)
+  emailAlertsEnabled   Boolean  @default(false) @map("email_alerts_enabled")
+  isActive             Boolean  @default(true) @map("is_active")
+  sortOrder            Int      @default(0) @map("sort_order")
+  createdBy            Int      @map("created_by")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("aquaticpro_certificate_types")
+}
+
+model AquaticproUserCertificate {
+  id                Int      @id @default(autoincrement())
+  userId            Int      @map("user_id")
+  certificateTypeId Int      @map("certificate_type_id")
+  trainingDate      DateTime? @map("training_date") @db.Date
+  expirationDate    DateTime? @map("expiration_date") @db.Date
+  fileAttachmentId  Int?     @map("file_attachment_id")
+  fileUrl           String   @default("") @map("file_url") @db.VarChar(2083)
+  status            String   @default("missing") @db.VarChar(30)
+  notes             String?
+  uploadedBy        Int?     @map("uploaded_by")
+  approvedBy        Int?     @map("approved_by")
+  approvedAt        DateTime? @map("approved_at")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, certificateTypeId])
+  @@index([userId])
+  @@index([certificateTypeId])
+  @@index([status])
+  @@index([expirationDate])
+  @@map("aquaticpro_user_certificates")
+}
+
+model AquaticproCertRoleRequirement {
+  id                Int      @id @default(autoincrement())
+  certificateTypeId Int      @map("certificate_type_id")
+  jobRoleId         Int      @map("job_role_id")
+  createdBy         Int      @map("created_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  @@unique([certificateTypeId, jobRoleId])
+  @@map("aquaticpro_cert_role_requirements")
+}
+
+// ============================================================
+// 15. NEW HIRES
+// ============================================================
+
+model AquaticproNewHire {
+  id               Int      @id @default(autoincrement())
+  firstName        String   @map("first_name") @db.VarChar(100)
+  lastName         String   @map("last_name") @db.VarChar(100)
+  email            String   @db.VarChar(255)
+  phone            String   @default("") @db.VarChar(50)
+  dateOfBirth      DateTime? @map("date_of_birth") @db.Date
+  address          String   @default("")
+  position         String   @db.VarChar(100)
+  isAccepting      Boolean  @default(true) @map("is_accepting")
+  needsWorkPermit  Boolean  @default(false) @map("needs_work_permit")
+  status           String   @default("pending") @db.VarChar(20)
+  wpUserId         Int?     @map("wp_user_id")
+  loiSent          Boolean  @default(false) @map("loi_sent")
+  loiSentDate      DateTime? @map("loi_sent_date")
+  loiDownloadToken String?  @map("loi_download_token") @db.VarChar(64)
+  notes            String   @default("")
+  isArchived       Boolean  @default(false) @map("is_archived")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([email])
+  @@index([status])
+  @@index([needsWorkPermit])
+  @@index([position])
+  @@index([isArchived])
+  @@map("aquaticpro_new_hires")
+}
+
+// ============================================================
+// 16. SECURITY / AUDIT
+// ============================================================
+
+model MpAuditLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int?     @map("user_id")
+  action       String   @db.VarChar(100)
+  resourceType String?  @map("resource_type") @db.VarChar(50)
+  resourceId   Int?     @map("resource_id")
+  details      String?
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+  @@index([createdAt])
+  @@index([ipAddress])
+  @@map("mp_audit_log")
+}
+
+// ============================================================
+// 17. DASHBOARD
+// ============================================================
+
+model AqpDashboardActionButton {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(255)
+  url             String   @db.VarChar(500)
+  color           String   @default("blue") @db.VarChar(50)
+  thumbnailUrl    String?  @map("thumbnail_url") @db.VarChar(500)
+  visibleToRoles  String?  @map("visible_to_roles")
+  sortOrder       Int      @default(0) @map("sort_order")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([sortOrder])
+  @@map("aqp_dashboard_action_buttons")
+}
+
+// ============================================================
+// 18. CORE / NOTIFICATIONS
+// ============================================================
+
+model MentorshipNotification {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  message    String
+  contextUrl String   @default("") @map("context_url") @db.VarChar(255)
+  time       DateTime @default(now())
+
+  @@index([userId])
+  @@map("mentorship_notifications")
+}
+
+// ============================================================
+// CPT-DERIVED TABLES (formerly WordPress Custom Post Types)
+// Converted to first-class relational tables for Next.js
+// ============================================================
+
+// Mentorship Requests (mp_request CPT)
+model MentorshipRequest {
+  id         Int      @id @default(autoincrement())
+  authorId   Int      @map("author_id")   // mentor
+  receiverId Int      @map("receiver_id") // mentee
+  status     String   @default("Pending") @db.VarChar(20)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([authorId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("mp_requests")
+}
+
+// Goals (mp_goal CPT)
+model MentorshipGoal {
+  id            Int      @id @default(autoincrement())
+  mentorshipId  Int      @map("mentorship_id")
+  authorId      Int      @map("author_id")
+  title         String   @db.VarChar(255)
+  content       String?
+  status        String   @default("Not Started") @db.VarChar(30)
+  isPortfolio   Boolean  @default(false) @map("is_portfolio")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([mentorshipId])
+  @@index([authorId])
+  @@map("mp_goals")
+}
+
+// Initiatives (mp_initiative CPT)
+model MentorshipInitiative {
+  id        Int      @id @default(autoincrement())
+  goalId    Int      @map("goal_id")
+  authorId  Int      @map("author_id")
+  title     String   @db.VarChar(255)
+  content   String?
+  status    String   @default("Not Started") @db.VarChar(30)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([goalId])
+  @@map("mp_initiatives")
+}
+
+// Tasks (mp_task CPT)
+model MentorshipTask {
+  id           Int      @id @default(autoincrement())
+  goalId       Int      @map("goal_id")
+  initiativeId Int?     @map("initiative_id")
+  authorId     Int      @map("author_id")
+  title        String   @db.VarChar(255)
+  content      String?
+  isCompleted  Boolean  @default(false) @map("is_completed")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([goalId])
+  @@index([initiativeId])
+  @@map("mp_tasks")
+}
+
+// Meetings (mp_meeting CPT)
+model MentorshipMeeting {
+  id           Int      @id @default(autoincrement())
+  goalId       Int      @map("goal_id")
+  initiativeId Int?     @map("initiative_id")
+  authorId     Int      @map("author_id")
+  title        String   @db.VarChar(255)
+  meetingDate  DateTime? @map("meeting_date")
+  meetingLink  String?  @map("meeting_link") @db.VarChar(500)
+  content      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([goalId])
+  @@index([initiativeId])
+  @@map("mp_meetings")
+}
+
+// Updates (mp_update CPT)
+model MentorshipUpdate {
+  id           Int      @id @default(autoincrement())
+  goalId       Int      @map("goal_id")
+  initiativeId Int?     @map("initiative_id")
+  authorId     Int      @map("author_id")
+  title        String   @db.VarChar(255)
+  content      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([goalId])
+  @@map("mp_updates")
+}
+
+// Lesson Management — Swimmers (lm-swimmer CPT)
+model LmSwimmer {
+  id                  Int      @id @default(autoincrement())
+  title               String   @db.VarChar(255)  // swimmer name
+  parentName          String?  @map("parent_name") @db.VarChar(255)
+  parentEmail         String?  @map("parent_email") @db.VarChar(255)
+  dateOfBirth         DateTime? @map("date_of_birth") @db.Date
+  notes               String?
+  currentLevel        Int?     @map("current_level")
+  levelsMastered      String?  @map("levels_mastered")   // JSON array of level IDs
+  skillsMastered      String?  @map("skills_mastered")   // JSON array of {skill_id, date}
+  evaluationToken     String?  @map("evaluation_token") @db.VarChar(64)
+  evaluationTokenExp  DateTime? @map("evaluation_token_expires")
+  archived            Boolean  @default(false)
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  @@index([archived])
+  @@map("lm_swimmers")
+}
+
+// Lesson Management — Levels (lm-level CPT)
+model LmLevel {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(255)
+  sortOrder       Int      @default(0) @map("sort_order")
+  relatedSkills   String?  @map("related_skills")  // JSON array of skill IDs
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("lm_levels")
+}
+
+// Lesson Management — Skills (lm-skill CPT)
+model LmSkill {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(255)
+  sortOrder       Int      @default(0) @map("sort_order")
+  levelAssociated Int?     @map("level_associated")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("lm_skills")
+}
+
+// Lesson Management — Groups (lm-group CPT)
+model LmGroup {
+  id              Int      @id @default(autoincrement())
+  title           String   @db.VarChar(255)
+  level           Int?     // FK → LmLevel.id
+  instructors     String?  // JSON array of user IDs
+  swimmers        String?  // JSON array of LmSwimmer IDs
+  swimmerGrouping String?  @map("swimmer_grouping")  // JSON object
+  days            String?  // JSON array of day strings
+  groupTime       String?  @map("group_time") @db.VarChar(50)
+  datesOffered    String?  @map("dates_offered")  // JSON array of date strings
+  notes           String?
+  mediaId         Int?     @map("media_id")
+  archived        Boolean  @default(false)
+  year            Int?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([archived])
+  @@index([year])
+  @@map("lm_groups")
+}
+
+// Lesson Management — Evaluations (lm-evaluation CPT)
+model LmEvaluation {
+  id             Int      @id @default(autoincrement())
+  swimmerId      Int      @map("swimmer_id")
+  levelEvaluated Int?     @map("level_evaluated")
+  emailed        Boolean  @default(false)
+  createdBy      Int      @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  @@index([swimmerId])
+  @@map("lm_evaluations")
 }

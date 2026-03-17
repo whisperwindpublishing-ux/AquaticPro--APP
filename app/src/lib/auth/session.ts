@@ -9,7 +9,6 @@ export interface SessionUser {
   displayName: string;
   isMember: boolean;
   isArchived: boolean;
-  isWpAdmin: boolean;
 }
 
 /**
@@ -33,7 +32,6 @@ export async function getSession(): Promise<SessionUser | null> {
       displayName: true,
       isMember: true,
       isArchived: true,
-      isWpAdmin: true,
     },
   });
 
