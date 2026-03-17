@@ -1,11 +1,38 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireSession } from "@/lib/auth/session";
+import { resolvePermissions } from "@/lib/auth/permissions";
+import { ok, created, badRequest, forbidden, serverError, parseBody } from "@/lib/utils/api-helpers";
 
-// TODO Phase 3: implement full CRUD — port from WordPress plugin includes/api-routes-*.php
+/** GET /api/lms-auto-assign  List auto-assign rules (admin). */
+export async function GET(_request: NextRequest) {
+  try {
+    const [user, authErr] = await requireSession();
+    if (authErr) return authErr;
 
-export async function GET() {
-  return NextResponse.json({ error: "Not yet implemented" }, { status: 501 });
+    const perms = await resolvePermissions(user.id);
+    if (!perms.isAdmin) return forbidden("Admin access required");
+
+    const rules = await prisma.aquaticproCourseAutoAssignRule.findMany({ orderBy: { id: "asc" } });
+    return ok({ rules });
+  } catch (e) { return serverError(e); }
 }
 
-export async function POST() {
-  return NextResponse.json({ error: "Not yet implemented" }, { status: 501 });
+/** POST /api/lms-auto-assign  Create an auto-assign rule. */
+export async function POST(request: NextRequest) {
+  try {
+    const [user, authErr] = await requireSession();
+    if (authErr) return authErr;
+
+    const perms = await resolvePermissions(user.id);
+    if (!perms.isAdmin) return forbidden("Admin access required");
+
+    const body = await parseBody<{ courseId: number; jobRoleId: number; sendNotification?: boolean }>(request);
+    if (!body?.courseId || !body?.jobRoleId) return badRequest("courseId and jobRoleId required");
+
+    const rule = await prisma.aquaticproCourseAutoAssignRule.create({
+      data: { courseId: body.courseId, jobRoleId: body.jobRoleId, sendNotification: body.sendNotification ?? true, createdBy: user.id },
+    });
+    return created(rule);
+  } catch (e) { return serverError(e); }
 }
