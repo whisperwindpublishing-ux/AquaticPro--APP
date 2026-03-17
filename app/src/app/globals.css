@@ -1,26 +1,104 @@
-@import "tailwindcss";
+/* Tailwind v4 — prefix all utilities with 'ap-' to avoid conflicts with WordPress themes */
+@import "tailwindcss" prefix(ap);
+
+/* ============================================
+   AquaticPro Design Tokens
+   Ported from tailwind.config.js (Tailwind v3)
+   ============================================ */
+
+@theme {
+  /* Brand (TailAdmin blue) */
+  --color-brand-50: #ecf3ff;
+  --color-brand-100: #dde9ff;
+  --color-brand-200: #c2d6ff;
+  --color-brand-300: #9cb9ff;
+  --color-brand-400: #7592ff;
+  --color-brand-500: #465fff;
+  --color-brand-600: #3641f5;
+  --color-brand-700: #2a31d8;
+  --color-brand-800: #1f25b0;
+  --color-brand-900: #1a1f8a;
+
+  /* Success (green) */
+  --color-success-50: #ecfdf3;
+  --color-success-100: #d1fadf;
+  --color-success-200: #a6f4c5;
+  --color-success-300: #6ce9a6;
+  --color-success-400: #32d583;
+  --color-success-500: #12b76a;
+  --color-success-600: #039855;
+  --color-success-700: #027a48;
+  --color-success-800: #05603a;
+  --color-success-900: #054f31;
+
+  /* Error (red) */
+  --color-error-50: #fef3f2;
+  --color-error-100: #fee4e2;
+  --color-error-200: #fecdca;
+  --color-error-300: #fda29b;
+  --color-error-400: #f97066;
+  --color-error-500: #f04438;
+  --color-error-600: #d92d20;
+  --color-error-700: #b42318;
+  --color-error-800: #912018;
+  --color-error-900: #7a271a;
+
+  /* Warning (amber) */
+  --color-warning-50: #fffaeb;
+  --color-warning-100: #fef0c7;
+  --color-warning-200: #fedf89;
+  --color-warning-300: #fec84b;
+  --color-warning-400: #fdb022;
+  --color-warning-500: #f79009;
+  --color-warning-600: #dc6803;
+  --color-warning-700: #b54708;
+  --color-warning-800: #93370d;
+  --color-warning-900: #7a2e0e;
+
+  /* AquaticPro brand gradient colors */
+  --color-aqua-blue: #0004ff;
+  --color-aqua-sky: #12a4ff;
+  --color-aqua-purple: #9f0fff;
+  --color-aqua-pink: #f538f2;
+
+  /* Lavender (sidebar navigation) */
+  --color-lavender-50: #f5f3ff;
+  --color-lavender-100: #ede9fe;
+  --color-lavender-200: #ddd6fe;
+  --color-lavender-300: #c4b5fd;
+  --color-lavender-400: #a78bfa;
+  --color-lavender-500: #8b5cf6;
+  --color-lavender-600: #7c3aed;
+  --color-lavender-700: #6d28d9;
+  --color-lavender-800: #5b21b6;
+  --color-lavender-900: #4c1d95;
+
+  /* Gradient backgrounds */
+  --background-image-gradient-aqua: linear-gradient(90deg, #0004ff, #12a4ff, #9f0fff, #f538f2);
+  --background-image-gradient-aqua-r: linear-gradient(90deg, #f538f2, #9f0fff, #12a4ff, #0004ff);
+
+  /* Animations */
+  --animate-gradient-x: gradient-x 3s ease infinite;
+
+  @keyframes gradient-x {
+    0%, 100% {
+      background-size: 200% 200%;
+      background-position: left center;
+    }
+    50% {
+      background-size: 200% 200%;
+      background-position: right center;
+    }
+  }
+}
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
+

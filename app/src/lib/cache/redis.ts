@@ -39,16 +39,16 @@ export async function invalidateCache(key: string): Promise<void> {
  * Invalidate all keys matching a pattern prefix.
  */
 export async function invalidateCachePrefix(prefix: string): Promise<void> {
-  // Upstash SCAN is limited — for small key sets, this works fine
-  let cursor = 0;
+  let cursor: string | number = 0;
   do {
-    const [nextCursor, keys] = await redis.scan(cursor, {
+    const result: [string | number, string[]] = await redis.scan(cursor, {
       match: `${prefix}*`,
       count: 100,
     });
-    cursor = nextCursor;
+    cursor = result[0];
+    const keys = result[1];
     if (keys.length > 0) {
       await redis.del(...keys);
     }
-  } while (cursor !== 0);
+  } while (cursor !== 0 && cursor !== "0");
 }
