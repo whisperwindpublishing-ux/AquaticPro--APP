@@ -80,7 +80,7 @@ export function Sidebar({ user, permissions: p }: SidebarProps) {
     <aside className="ap-flex ap-h-full ap-w-64 ap-flex-col ap-border-r ap-border-gray-100 ap-bg-white">
       {/* Brand */}
       <div className="ap-flex ap-h-16 ap-items-center ap-gap-2 ap-border-b ap-border-gray-100 ap-px-5">
-        <div className="ap-h-8 ap-w-8 ap-rounded-lg ap-bg-gradient-aqua" />
+          <div className="ap-h-8 ap-w-8 ap-rounded-lg ap-shrink-0" style={{ background: "linear-gradient(135deg, #0004ff, #12a4ff, #9f0fff, #f538f2)" }} />
         <span className="ap-text-base ap-font-bold ap-text-gray-900">AquaticPro</span>
       </div>
 
