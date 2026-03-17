@@ -1,0 +1,5 @@
+{
+  "name": "AquaticPro",
+  "description": "A modern, single-page application built with React to facilitate a flexible mentorship network. Users can find mentors, view profiles, and manage their mentorship journey.",
+  "requestFramePermissions": []
+}

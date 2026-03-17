@@ -1,0 +1,19 @@
+{
+  "name": "AquaticPro",
+  "short_name": "AquaticPro",
+  "description": "Professional aquatic staff development platform",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#0ea5e9",
+  "orientation": "any",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='96' fill='%230ea5e9'/%3E%3Cpath d='M256 120c-72 0-136 48-136 120 0 40 20 72 56 96l-16 56 64-32c16 4 32 8 48 8 72 0 120-56 120-128S328 120 256 120z' fill='white' opacity='0.9'/%3E%3Ccircle cx='208' cy='248' r='16' fill='%230ea5e9'/%3E%3Ccircle cx='256' cy='248' r='16' fill='%230ea5e9'/%3E%3Ccircle cx='304' cy='248' r='16' fill='%230ea5e9'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

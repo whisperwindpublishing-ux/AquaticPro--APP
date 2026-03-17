@@ -1,0 +1,633 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { UserProfile, GroupedDailyLogs, TimeSlotDefinition, DailyLog } from '@/types';
+import { getDailyLogs, getTimeSlots, deleteDailyLog } from '@/services/api';
+import DailyLogCard from './DailyLogCard';
+import LoadingSpinner from './LoadingSpinner';
+import GradientButton from './GradientButton';
+import { useDailyLogPermissions } from '@/hooks/useDailyLogPermissions';
+import {
+    HiOutlineFunnel,
+    HiOutlinePlus
+} from 'react-icons/hi2';
+
+interface DailyLogListProps {
+    currentUser: UserProfile;
+    filterByCurrentUser?: boolean; // If true, only show logs by current user
+    showCreateButton?: boolean; // If true, show "Create New Log" button
+    readOnlyMode?: boolean; // If true, hide all edit/delete actions (blog-style view)
+    onCreateNew?: () => void; // Callback when "Create New" is clicked
+    onEditLog?: (log: DailyLog) => void; // Callback when edit is clicked
+}
+
+/**
+ * DailyLogList component - Displays daily logs with hierarchical grouping
+ * 
+ * Features:
+ * - Auto-grouping by Location → Date → Time Slot
+ * - Collapsible accordions for each level
+ * - Filtering by location, date range, time slot, and user
+ * - Supports multi-slot logs (appears under each selected slot)
+ * - Year-based lazy loading (hides logs 1+ years old until explicitly shown)
+ * - Empty state handling
+ */
+export const DailyLogList: React.FC<DailyLogListProps> = ({
+    currentUser,
+    filterByCurrentUser = false,
+    showCreateButton = true,
+    readOnlyMode = false,
+    onCreateNew,
+    onEditLog
+}) => {
+    const [groupedLogs, setGroupedLogs] = useState<GroupedDailyLogs | null>(null);
+    const [timeSlots, setTimeSlots] = useState<TimeSlotDefinition[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    // Fetch user's daily log permissions
+    const permissions = useDailyLogPermissions();
+
+    // Filters
+    const [selectedLocationName, setSelectedLocationName] = useState<string>('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>('');
+    const [showFilters, setShowFilters] = useState(false);
+
+    // Fetch time slots and locations on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const slots = await getTimeSlots(true);
+                setTimeSlots(slots);
+            } catch (error) {
+                console.error('Failed to fetch time slots:', error);
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    // Fetch logs
+    const fetchLogs = async () => {
+        setIsLoading(true);
+        setError(null);
+        try {
+            const params: any = { grouped: true };
+            
+            // Don't filter by location in API call - we'll filter client-side
+            if (startDate && endDate) {
+                params.dateRange = { start: startDate, end: endDate };
+            }
+            if (selectedTimeSlot) params.timeSlot = selectedTimeSlot;
+            if (filterByCurrentUser) params.authorId = currentUser.id;
+
+            const data = await getDailyLogs(params) as GroupedDailyLogs;
+            setGroupedLogs(data);
+        } catch (err) {
+            console.error('Failed to fetch daily logs:', err);
+            setError('Failed to load daily logs. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchLogs();
+    }, [startDate, endDate, selectedTimeSlot]);
+
+    const toggleLocation = (locationName: string) => {
+        setExpandedLocations(prev => {
+            const next = new Set(prev);
+            if (next.has(locationName)) {
+                next.delete(locationName);
+            } else {
+                next.add(locationName);
+            }
+            return next;
+        });
+    };
+
+    const toggleDate = (locationName: string, date: string) => {
+        const key = `${locationName}-${date}`;
+        setExpandedDates(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    };
+
+    const toggleSlot = (locationName: string, date: string, slotId: string) => {
+        const key = `${locationName}-${date}-${slotId}`;
+        setExpandedSlots(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) {
+                next.delete(key);
+            } else {
+                next.add(key);
+            }
+            return next;
+        });
+    };
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString + 'T00:00:00');
+        return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
+    const clearFilters = () => {
+        setSelectedLocation(null);
+        setStartDate('');
+        setEndDate('');
+        setSelectedTimeSlot('');
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center items-center py-12">
+                <LoadingSpinner />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="text-center py-12">
+                <p className="text-red-600">{error}</p>
+                <GradientButton
+                    onClick={fetchLogs}
+                    variant="primary"
+                    className="mt-4"
+                >
+                    Try Again
+                </GradientButton>
+            </div>
+        );
+    }
+
+    const hasLogs = groupedLogs && Object.keys(groupedLogs).length > 0;
+
+    const handleEdit = (log: DailyLog) => {
+        if (onEditLog) {
+            onEditLog(log);
+        }
+    };
+
+    const handleDelete = async (log: DailyLog) => {
+        if (!confirm(`Are you sure you want to delete "${log.title}"?`)) {
+            return;
+        }
+        
+        try {
+            await deleteDailyLog(log.id);
+            fetchLogs(); // Refresh the list
+        } catch (error) {
+            console.error('Failed to delete log:', error);
+            alert('Failed to delete log. Please try again.');
+        }
+    };
+
+    const handleLogUpdate = (updatedLog: DailyLog) => {
+        if (!groupedLogs) return;
+        
+        // Update the log in place without refetching
+        setGroupedLogs(prevGrouped => {
+            if (!prevGrouped) return prevGrouped;
+            
+            const newGrouped = { ...prevGrouped };
+            
+            // Find and update the log in the grouped structure
+            Object.keys(newGrouped).forEach(locationName => {
+                Object.keys(newGrouped[locationName].dates).forEach(date => {
+                    Object.keys(newGrouped[locationName].dates[date].timeSlots).forEach(slotId => {
+                        const logs = newGrouped[locationName].dates[date].timeSlots[slotId].logs;
+                        const logIndex = logs.findIndex((l: DailyLog) => l.id === updatedLog.id);
+                        if (logIndex !== -1) {
+                            logs[logIndex] = updatedLog;
+                        }
+                    });
+                });
+            });
+            
+            return newGrouped;
+        });
+    };
+
+    // Expand/Collapse All functionality
+    const expandAll = () => {
+        if (!groupedLogs) return;
+        
+        const allLocations = new Set<string>();
+        const allDates = new Set<string>();
+        const allSlots = new Set<string>();
+        
+        Object.entries(groupedLogs).forEach(([locationName, locationData]) => {
+            allLocations.add(locationName);
+            
+            Object.entries(locationData.dates).forEach(([date, dateData]) => {
+                const dateKey = `${locationName}-${date}`;
+                allDates.add(dateKey);
+                
+                Object.keys(dateData.timeSlots).forEach(slotId => {
+                    const slotKey = `${locationName}-${date}-${slotId}`;
+                    allSlots.add(slotKey);
+                });
+            });
+        });
+        
+        setExpandedLocations(allLocations);
+        setExpandedDates(allDates);
+        setExpandedSlots(allSlots);
+    };
+
+    const collapseAll = () => {
+        setExpandedLocations(new Set());
+        setExpandedDates(new Set());
+        setExpandedSlots(new Set());
+    };
+
+    // Date range presets
+    const setDateRangePreset = (preset: 'today' | 'week' | 'month' | 'clear') => {
+        const today = new Date();
+        
+        switch (preset) {
+            case 'today':
+                const todayStr = today.toISOString().split('T')[0];
+                setStartDate(todayStr);
+                setEndDate(todayStr);
+                break;
+            case 'week':
+                const weekAgo = new Date(today);
+                weekAgo.setDate(today.getDate() - 7);
+                setStartDate(weekAgo.toISOString().split('T')[0]);
+                setEndDate(today.toISOString().split('T')[0]);
+                break;
+            case 'month':
+                const monthAgo = new Date(today);
+                monthAgo.setMonth(today.getMonth() - 1);
+                setStartDate(monthAgo.toISOString().split('T')[0]);
+                setEndDate(today.toISOString().split('T')[0]);
+                break;
+            case 'clear':
+                setStartDate('');
+                setEndDate('');
+                break;
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header with Create Button */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">
+                        {filterByCurrentUser ? 'My Daily Logs' : 'Team Daily Logs'}
+                    </h1>
+                    <p className="mt-1 text-sm text-gray-600">
+                        {filterByCurrentUser 
+                            ? 'Create and manage your daily activity logs'
+                            : 'View team daily activities and shifts across locations'
+                        }
+                    </p>
+                </div>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
+                    {/* Expand/Collapse All */}
+                    {hasLogs && (
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={expandAll}
+                                className="px-3 py-2 min-h-[44px] text-sm font-medium text-aqua-blue hover:bg-blue-50 rounded-lg transition-colors touch-manipulation"
+                            >
+                                Expand All
+                            </button>
+                            <button
+                                onClick={collapseAll}
+                                className="px-3 py-2 min-h-[44px] text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors touch-manipulation"
+                            >
+                                Collapse All
+                            </button>
+                        </div>
+                    )}
+                    {showCreateButton && permissions.canCreate && onCreateNew && (
+                        <GradientButton
+                            onClick={onCreateNew}
+                            variant="primary"
+                            disabled={permissions.isLoading}
+                            className="flex items-center gap-2"
+                        >
+                            <HiOutlinePlus className="h-5 w-5" />
+                            New Log
+                        </GradientButton>
+                    )}
+                    {showCreateButton && !permissions.canCreate && !permissions.isLoading && (
+                        <div className="text-sm text-gray-500 italic">
+                            You don't have permission to create daily logs
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Filters */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+                <button
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="flex items-center gap-2 text-gray-700 font-medium"
+                >
+                    <HiOutlineFunnel className="h-5 w-5" />
+                    Filters
+                    {showFilters ? (
+                        <HiOutlineChevronDown className="h-5 w-5" />
+                    ) : (
+                        <HiOutlineChevronRight className="h-5 w-5" />
+                    )}
+                </button>
+
+                {showFilters && (
+                    <div className="mt-4 space-y-4">
+                        {/* Date Range Presets */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Quick Date Ranges
+                            </label>
+                            <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2">
+                                <button
+                                    onClick={() => setDateRangePreset('today')}
+                                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-white bg-aqua-sky hover:bg-aqua-blue rounded-lg transition-colors touch-manipulation"
+                                >
+                                    Today
+                                </button>
+                                <button
+                                    onClick={() => setDateRangePreset('week')}
+                                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors touch-manipulation"
+                                >
+                                    Last 7 Days
+                                </button>
+                                <button
+                                    onClick={() => setDateRangePreset('month')}
+                                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors touch-manipulation"
+                                >
+                                    Last 30 Days
+                                </button>
+                                <button
+                                    onClick={() => setDateRangePreset('clear')}
+                                    className="px-4 py-2 min-h-[44px] text-sm font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg transition-colors touch-manipulation"
+                                >
+                                    All Time
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {/* Location Filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Location
+                                </label>
+                                <select
+                                    value={selectedLocation || 0}
+                                    onChange={(e) => setSelectedLocation(Number(e.target.value) || null)}
+                                    className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aqua-blue"
+                                >
+                                    <option value={0}>All Locations</option>
+                                    {/* Locations will be populated from grouped data */}
+                                    {groupedLogs && Object.values(groupedLogs).map((location: any) => (
+                                        <option key={location.locationId} value={location.locationId}>
+                                            {location.locationName}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Start Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aqua-blue"
+                                />
+                            </div>
+
+                            {/* End Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    End Date
+                                </label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aqua-blue"
+                                />
+                            </div>
+
+                            {/* Time Slot Filter */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Time Slot
+                                </label>
+                                <select
+                                    value={selectedTimeSlot}
+                                    onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                                    className="w-full min-w-0 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-aqua-blue"
+                                >
+                                    <option value="">All Time Slots</option>
+                                    {timeSlots.map(slot => (
+                                        <option key={slot.id} value={slot.id.toString()}>
+                                            {slot.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Clear Filters */}
+                        <div>
+                            <button
+                                onClick={clearFilters}
+                                className="text-sm text-aqua-blue hover:text-blue-800"
+                            >
+                                Clear All Filters
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Grouped Logs */}
+            {!hasLogs ? (
+                <div className="text-center py-12 bg-white rounded-lg shadow-sm">
+                    <p className="text-gray-600">No daily logs found.</p>
+                    <p className="text-sm text-gray-500 mt-2">
+                        Try adjusting your filters or create a new log.
+                    </p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {Object.entries(groupedLogs).map(([locationName, locationData]) => (
+                        <div key={locationName} className="bg-white rounded-lg shadow-sm overflow-hidden">
+                            {/* Location Header */}
+                            <button
+                                onClick={() => toggleLocation(locationName)}
+                                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+                            >
+                                <div className="flex items-center gap-3">
+                                    {expandedLocations.has(locationName) ? (
+                                        <HiOutlineChevronDown className="h-6 w-6 text-gray-500" />
+                                    ) : (
+                                        <HiOutlineChevronRight className="h-6 w-6 text-gray-500" />
+                                    )}
+                                    <h2 className="text-xl font-bold text-gray-900">
+                                        {locationName}
+                                    </h2>
+                                </div>
+                                <span className="text-sm text-gray-500">
+                                    {Object.keys(locationData.dates).length} {Object.keys(locationData.dates).length === 1 ? 'date' : 'dates'}
+                                </span>
+                            </button>
+
+                            {/* Dates - grouped by year */}
+                            {expandedLocations.has(locationName) && (
+                                <div className="px-4 pb-4 space-y-3">
+                                    {Object.entries(locationData.dates)
+                                        .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
+                                        .filter(([date]) => shouldShowDate(date)) // Hide old dates unless year expanded
+                                        .map(([date, dateData]) => {
+                                            const dateKey = `${locationName}-${date}`;
+                                            return (
+                                                <div key={date} className="border border-gray-200 rounded-lg">
+                                                    {/* Date Header */}
+                                                    <button
+                                                        onClick={() => toggleDate(locationName, date)}
+                                                        className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                                                    >
+                                                        <div className="flex items-center gap-2">
+                                                            {expandedDates.has(dateKey) ? (
+                                                                <HiOutlineChevronDown className="h-5 w-5 text-gray-500" />
+                                                            ) : (
+                                                                <HiOutlineChevronRight className="h-5 w-5 text-gray-500" />
+                                                            )}
+                                                            <span className="font-semibold text-gray-800">
+                                                                {formatDate(date)}
+                                                            </span>
+                                                        </div>
+                                                    </button>
+
+                                                    {/* Time Slots */}
+                                                    {expandedDates.has(dateKey) && (
+                                                        <div className="px-3 pb-3 space-y-2">
+                                                            {Object.entries(dateData.timeSlots).map(([slotId, slotData]) => {
+                                                                if (!slotData || slotData.logs.length === 0) return null;
+
+                                                                const slotKey = `${locationName}-${date}-${slotId}`;
+                                                                const { slot, logs } = slotData;
+                                                                
+                                                                return (
+                                                                    <div key={slotId} className="bg-gray-50 rounded-lg p-3">
+                                                                        {/* Time Slot Header */}
+                                                                        <button
+                                                                            onClick={() => toggleSlot(locationName, date, slotId)}
+                                                                            className="w-full flex items-center justify-between mb-2"
+                                                                        >
+                                                                            <div className="flex items-center gap-2">
+                                                                                {expandedSlots.has(slotKey) ? (
+                                                                                    <HiOutlineChevronDown className="h-4 w-4 text-gray-500" />
+                                                                                ) : (
+                                                                                    <HiOutlineChevronRight className="h-4 w-4 text-gray-500" />
+                                                                                )}
+                                                                                <span 
+                                                                                    className="text-sm font-medium text-gray-700"
+                                                                                    style={{ color: slot.color || undefined }}
+                                                                                >
+                                                                                    {slot.label}
+                                                                                </span>
+                                                                                <span className="text-xs text-gray-500">
+                                                                                    ({logs.length} {logs.length === 1 ? 'log' : 'logs'})
+                                                                                </span>
+                                                                            </div>
+                                                                        </button>
+
+                                                                        {/* Logs */}
+                                                                        {expandedSlots.has(slotKey) && (
+                                                                            <div className="space-y-3">
+                                                                                {logs.map(log => {
+                                                                                    // Check if this log is from today
+                                                                                    const today = new Date().toISOString().split('T')[0];
+                                                                                    const isToday = date === today;
+                                                                                    
+                                                                                    return (
+                                                                                        <DailyLogCard
+                                                                                            key={log.id}
+                                                                                            log={log}
+                                                                                            currentUser={currentUser}
+                                                                                            onUpdate={handleLogUpdate}
+                                                                                            onEdit={() => handleEdit(log)}
+                                                                                            onDelete={() => handleDelete(log)}
+                                                                                            canEdit={readOnlyMode ? false : permissions.canEdit}
+                                                                                            canDelete={readOnlyMode ? false : permissions.canDelete}
+                                                                                            canModerateAll={readOnlyMode ? false : permissions.canModerateAll}
+                                                                                            expandCommentsByDefault={isToday}
+                                                                                            expandContentByDefault={isToday}
+                                                                                        />
+                                                                                    );
+                                                                                })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    
+                                    {/* Show older years button */}
+                                    {(() => {
+                                        const allYears = new Set<number>();
+                                        Object.keys(locationData.dates).forEach(dateString => {
+                                            const year = new Date(dateString).getFullYear();
+                                            if (year < currentYear - 1) {
+                                                allYears.add(year);
+                                            }
+                                        });
+                                        const oldYears = Array.from(allYears).sort((a, b) => b - a);
+                                        const hiddenYears = oldYears.filter(year => !expandedYears.has(year));
+                                        
+                                        if (hiddenYears.length > 0) {
+                                            return (
+                                                <div className="pt-2">
+                                                    <button
+                                                        onClick={() => hiddenYears.forEach(year => toggleYear(year))}
+                                                        className="w-full text-left px-3 py-2 text-sm text-aqua-blue hover:bg-blue-50 rounded-lg transition-colors flex items-center gap-2"
+                                                    >
+                                                        <HiOutlineChevronRight className="h-4 w-4" />
+                                                        Show logs from {hiddenYears.join(', ')} ({hiddenYears.length} {hiddenYears.length === 1 ? 'year' : 'years'})
+                                                    </button>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default DailyLogList;

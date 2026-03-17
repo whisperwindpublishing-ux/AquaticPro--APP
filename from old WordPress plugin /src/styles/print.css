@@ -1,0 +1,167 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * Print Stylesheet — Goal Workspace
+ * Linearizes the 3-column workspace layout for print / PDF export.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+@media print {
+    /* ─── Hide non-printable elements ──────────────────────────────────────── */
+    /* Navigation, drawers, interactive elements */
+    .no-print,
+    .mobile-drawer,
+    .drawer-triggers,
+    .save-indicator,
+    .update-composer,
+    .dnd-draggable-handle,
+    .toast-slide-in,
+    nav,
+    header:not(.print-header) {
+        display: none !important;
+    }
+
+    /* Hide all buttons except explicitly print-visible ones */
+    button:not(.print-visible),
+    [role="button"]:not(.print-visible),
+    input[type="button"]:not(.print-visible),
+    input[type="submit"]:not(.print-visible) {
+        display: none !important;
+    }
+
+    /* Hide form elements */
+    input[type="text"],
+    input[type="search"],
+    textarea,
+    select,
+    .comment-form,
+    .ap-cursor-grab {
+        display: none !important;
+    }
+
+    /* Hide mobile-only elements */
+    .lg\:ap-hidden {
+        display: none !important;
+    }
+
+    /* ─── Linearize layout ─────────────────────────────────────────────────── */
+    /* The 3-column WorkspaceColumns becomes single column */
+    .workspace-columns {
+        display: block !important;
+        width: 100% !important;
+    }
+
+    .workspace-columns > * {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        max-height: none !important;
+        overflow: visible !important;
+        margin-bottom: 16pt !important;
+    }
+
+    /* ─── Expand all cards ─────────────────────────────────────────────────── */
+    .workspace-card,
+    [class*="expandable-card"] {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    /* ─── Page break rules ─────────────────────────────────────────────────── */
+    .print-section {
+        break-before: auto;
+        break-inside: avoid;
+    }
+
+    .print-page-break {
+        break-before: page;
+    }
+
+    /* Prevent orphaned meeting/update items */
+    .meeting-item,
+    .update-item,
+    [id^="meeting-"],
+    [id^="update-"],
+    [id^="task-"] {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    /* ─── Clean typography ─────────────────────────────────────────────────── */
+    body {
+        font-size: 11pt !important;
+        color: #000 !important;
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    h2 {
+        font-size: 16pt !important;
+        border-bottom: 1pt solid #333 !important;
+        padding-bottom: 4pt !important;
+        margin-bottom: 8pt !important;
+    }
+
+    h3 {
+        font-size: 13pt !important;
+        margin-bottom: 6pt !important;
+    }
+
+    /* ─── Remove decorative elements ───────────────────────────────────────── */
+    * {
+        box-shadow: none !important;
+        text-shadow: none !important;
+    }
+
+    /* Keep borders for structure but lighten */
+    .ap-border,
+    [class*="ap-border"] {
+        border-color: #ddd !important;
+    }
+
+    /* ─── Links ────────────────────────────────────────────────────────────── */
+    a[href] {
+        color: #000 !important;
+        text-decoration: underline !important;
+    }
+
+    /* ─── Screen-only elements hidden, print-only shown ────────────────────── */
+    .print-only {
+        display: block !important;
+    }
+
+    .screen-only {
+        display: none !important;
+    }
+
+    /* ─── Page margins ─────────────────────────────────────────────────────── */
+    @page {
+        margin: 0.75in;
+        size: letter portrait;
+    }
+
+    @page :first {
+        margin-top: 0.5in;
+    }
+
+    /* ─── Root container full width ────────────────────────────────────────── */
+    #root {
+        background: white !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Remove gradient backgrounds */
+    [class*="ap-bg-gradient"] {
+        background: white !important;
+    }
+
+    /* ─── Status badges print with color ───────────────────────────────────── */
+    [class*="ap-bg-yellow"],
+    [class*="ap-bg-green"],
+    [class*="ap-bg-blue"],
+    [class*="ap-bg-purple"],
+    [class*="ap-bg-red"] {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}

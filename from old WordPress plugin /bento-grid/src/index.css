@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pool-inspired base styles */
+:root {
+  --accent-color: #0ea5e9;
+}
+
+/* Custom scrollbar for pool aesthetic */
+.bento-grid-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.bento-grid-container ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.bento-grid-container ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #0ea5e9, #06b6d4);
+  border-radius: 4px;
+}
+
+.bento-grid-container ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #0284c7, #0891b2);
+}
+
+/* Water ripple effect */
+@keyframes water-ripple {
+  0% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 15px rgba(14, 165, 233, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(14, 165, 233, 0);
+  }
+}
+
+.water-ripple {
+  animation: water-ripple 1.5s ease-out;
+}
+
+/* Smooth content transitions */
+.bento-content {
+  @apply max-w-none text-lg md:text-xl leading-relaxed;
+}
+
+.bento-content img {
+  @apply rounded-xl my-6;
+}
+
+.bento-content p {
+  @apply text-gray-700 leading-relaxed mb-6 text-lg md:text-xl;
+}
+
+.bento-content h1,
+.bento-content h2,
+.bento-content h3,
+.bento-content h4 {
+  @apply text-gray-800 font-bold mt-8 mb-4;
+}
+
+.bento-content h1 {
+  @apply text-2xl md:text-3xl;
+}
+
+.bento-content h2 {
+  @apply text-xl md:text-2xl;
+}
+
+.bento-content h3 {
+  @apply text-lg md:text-xl;
+}
+
+.bento-content ul,
+.bento-content ol {
+  @apply pl-6 my-6 space-y-3 text-lg md:text-xl;
+}
+
+.bento-content a {
+  @apply text-pool-600 hover:text-pool-700 underline decoration-pool-300 hover:decoration-pool-500 transition-colors;
+}
+
+/* Category filter pills */
+.filter-pill {
+  @apply px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ease-out;
+  @apply border-2 border-transparent;
+  @apply hover:scale-105 active:scale-95;
+}
+
+.filter-pill-active {
+  @apply bg-gradient-to-r from-pool-500 to-aqua-500 text-white shadow-pool;
+}
+
+.filter-pill-inactive {
+  @apply bg-white text-gray-600 border-gray-200 hover:border-pool-300 hover:text-pool-600;
+}
+
+/* Card shimmer loading effect */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #f1f5f9 25%,
+    #e2e8f0 50%,
+    #f1f5f9 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Expanded card overlay */
+.expanded-overlay {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}

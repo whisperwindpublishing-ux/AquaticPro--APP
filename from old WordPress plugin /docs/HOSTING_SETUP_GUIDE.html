@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AquaticPro Hosting Setup Guide</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 860px; margin: 40px auto; padding: 0 32px; color: #1a1a1a; line-height: 1.7; }
+  h1 { font-size: 2rem; border-bottom: 3px solid #0057b8; padding-bottom: 12px; color: #0057b8; }
+  h2 { font-size: 1.35rem; margin-top: 2.5rem; color: #003d8a; border-left: 4px solid #0057b8; padding-left: 12px; }
+  h3 { font-size: 1.1rem; margin-top: 1.5rem; color: #222; }
+  p { margin: 0.6rem 0; }
+  ul, ol { padding-left: 1.5rem; }
+  li { margin: 0.4rem 0; }
+  code { background: #f0f4ff; border: 1px solid #c7d7f5; border-radius: 4px; padding: 2px 6px; font-size: 0.88em; font-family: 'Courier New', monospace; }
+  pre { background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 16px; overflow-x: auto; font-size: 0.9em; }
+  pre code { background: none; border: none; color: inherit; padding: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.95rem; }
+  th { background: #0057b8; color: white; padding: 10px 14px; text-align: left; }
+  td { padding: 9px 14px; border-bottom: 1px solid #e0e8f5; }
+  tr:nth-child(even) td { background: #f5f8ff; }
+  .callout { background: #fff8e1; border-left: 4px solid #f59e0b; padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 1rem 0; }
+  .callout.success { background: #e8f5e9; border-color: #22c55e; }
+  .callout.warning { background: #fff3cd; border-color: #f59e0b; }
+  .step { display: flex; gap: 14px; margin: 0.7rem 0; }
+  .step-num { background: #0057b8; color: white; border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: bold; flex-shrink: 0; margin-top: 2px; }
+  .badge { display: inline-block; background: #e0f2fe; color: #0369a1; border-radius: 12px; padding: 2px 10px; font-size: 0.82rem; font-weight: 600; margin-left: 6px; }
+  .badge.green { background: #dcfce7; color: #166534; }
+  .badge.yellow { background: #fef9c3; color: #854d0e; }
+  footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.85rem; color: #888; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+
+<h1>AquaticPro Hosting &amp; Deployment Guide</h1>
+<p><strong>Stack:</strong> Hetzner VPS &nbsp;+&nbsp; SpinupWP &nbsp;+&nbsp; MainWP &nbsp;&nbsp;|&nbsp;&nbsp; <strong>Date:</strong> March 2026</p>
+
+<div class="callout success">
+  <strong>Summary:</strong> Each client gets a fully isolated WordPress install on a shared VPS. SpinupWP manages server config, SSL, and Nginx automatically. MainWP lets you push plugin updates to all sites in one click.
+</div>
+
+<!-- ============================================================ -->
+<h2>1. Why This Architecture</h2>
+
+<table>
+  <tr><th></th><th>This Setup (Separate Installs)</th><th>WordPress Multisite</th></tr>
+  <tr><td>User data isolation</td><td>✅ Fully isolated</td><td>⚠️ Shared user table</td></tr>
+  <tr><td>Content isolation</td><td>✅ Separate databases</td><td>✅ Separate table prefixes</td></tr>
+  <tr><td>Plugin updates</td><td>✅ MainWP one-click</td><td>✅ One install</td></tr>
+  <tr><td>One bad update affects others</td><td>✅ Isolated</td><td>⚠️ All sites affected</td></tr>
+  <tr><td>SSL management</td><td>✅ Auto via SpinupWP</td><td>✅ Auto</td></tr>
+  <tr><td>Per-client customization</td><td>✅ Flexible</td><td>⚠️ Constrained</td></tr>
+</table>
+
+<p><strong>Key reason to avoid Multisite:</strong> WordPress Multisite shares one global <code>wp_users</code> table. Client A's employees would exist network-wide — unacceptable for HR/employee data.</p>
+
+<!-- ============================================================ -->
+<h2>2. Monthly Cost</h2>
+
+<table>
+  <tr><th>Service</th><th>Cost</th><th>Notes</th></tr>
+  <tr><td>Hetzner CX22 VPS</td><td>~€4/mo</td><td>2 vCPU, 4GB RAM, 40GB SSD — sufficient for 10–20 client sites</td></tr>
+  <tr><td>SpinupWP</td><td>$18/mo</td><td>Unlimited sites on your own server, GUI-managed</td></tr>
+  <tr><td>MainWP</td><td>Free</td><td>Self-hosted dashboard, one-click plugin updates</td></tr>
+  <tr><td><strong>Total</strong></td><td><strong>~$22/mo</strong></td><td>Unlimited client sites</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>3. Initial Server Setup</h2>
+
+<h3>Step 1 — Create Hetzner VPS</h3>
+<ol>
+  <li>Go to <strong>console.hetzner.cloud</strong> → New Project → Add Server</li>
+  <li>Choose <strong>CX22</strong> (Ubuntu 22.04 LTS)</li>
+  <li>Add your SSH public key</li>
+  <li>Note the server's public IP address</li>
+</ol>
+
+<h3>Step 2 — Connect to SpinupWP</h3>
+<ol>
+  <li>Sign up at <strong>spinupwp.com</strong></li>
+  <li>Dashboard → Add Server → "I'll provide my own server"</li>
+  <li>Enter your Hetzner IP and root SSH credentials</li>
+  <li>SpinupWP provisions Nginx, PHP-FPM, MySQL, Let's Encrypt automatically (~10 min)</li>
+</ol>
+
+<div class="callout">
+  <strong>You never need to touch the terminal.</strong> SpinupWP handles all server configuration, SSL renewals, and Nginx vhosts going forward.
+</div>
+
+<!-- ============================================================ -->
+<h2>4. One-Time: Build the Template Site</h2>
+
+<p>Create a master template that gets cloned for every new client.</p>
+
+<h3>Step 1 — Create the template site in SpinupWP</h3>
+<ol>
+  <li>SpinupWP → Add Site → Domain: <code>template.aquaticpro.org</code></li>
+  <li>SSL provisions automatically</li>
+  <li>Install WordPress via SpinupWP one-click</li>
+</ol>
+
+<h3>Step 2 — Configure WordPress</h3>
+<ol>
+  <li>Log into WordPress admin</li>
+  <li>Delete default post, page, and comment</li>
+  <li>Delete unused themes (keep Twenty-Twenty-Four or similar)</li>
+  <li>Settings → General: set timezone, disable anyone can register</li>
+  <li>Settings → Reading: discourage search engines (optional for template)</li>
+  <li>Settings → Discussion: disable comments globally</li>
+  <li>Settings → Permalinks: set to <strong>Post name</strong></li>
+</ol>
+
+<h3>Step 3 — Install Plugins</h3>
+<ol>
+  <li>Upload and activate <code>aquaticpro.zip</code> via Plugins → Add New → Upload</li>
+  <li>Install and activate <strong>MailPoet</strong> from the WordPress plugin directory</li>
+  <li>Configure MailPoet: From name, From email, sending method (use MailPoet's sending service or your SMTP)</li>
+  <li>Install and activate <strong>MainWP Child</strong> plugin (needed for MainWP management later)</li>
+</ol>
+
+<h3>Step 4 — Snapshot the template</h3>
+<ol>
+  <li>In SpinupWP → Site → Backups → Run backup now</li>
+  <li>Label it "AquaticPro Template v1"</li>
+  <li>This becomes the source for all future client clones</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2>5. Per-Client: New Site Workflow</h2>
+
+<p>Estimated time per new client: <strong>~5–10 minutes</strong></p>
+
+<h3>Step 1 — DNS</h3>
+<ol>
+  <li>In your DNS provider (wherever <code>aquaticpro.org</code> is managed), add an A record:</li>
+</ol>
+<pre><code>Type: A
+Name: clientname
+Value: [your Hetzner IP]
+TTL: 3600</code></pre>
+
+<h3>Step 2 — Create site in SpinupWP</h3>
+<ol>
+  <li>SpinupWP → Add Site → Domain: <code>clientname.aquaticpro.org</code></li>
+  <li>Under "Clone from existing site" → select your template site</li>
+  <li>SpinupWP clones all files and the database</li>
+  <li>SSL certificate issues automatically</li>
+</ol>
+
+<h3>Step 3 — Update site URL (post-clone)</h3>
+<ol>
+  <li>Log into the new site's WordPress admin</li>
+  <li>Settings → General → verify WordPress Address and Site Address show <code>clientname.aquaticpro.org</code> (SpinupWP usually handles this automatically — just verify)</li>
+</ol>
+
+<h3>Step 4 — Connect to MainWP</h3>
+<ol>
+  <li>On the new site, go to Plugins → MainWP Child → copy the Security Key</li>
+  <li>In your MainWP Dashboard site → Add New Site → enter URL + security key</li>
+  <li>Site is now managed centrally</li>
+</ol>
+
+<div class="callout success">
+  New client site is live with: SSL ✅ &nbsp; AquaticPro plugin ✅ &nbsp; MailPoet configured ✅ &nbsp; Clean WordPress ✅
+</div>
+
+<!-- ============================================================ -->
+<h2>6. Setting Up MainWP Dashboard</h2>
+
+<p>MainWP Dashboard runs on its own WordPress install — a private management site on the same VPS.</p>
+
+<ol>
+  <li>In SpinupWP → Add Site → Domain: <code>manage.aquaticpro.org</code> (keep this private/password protected)</li>
+  <li>Install WordPress → Install <strong>MainWP Dashboard</strong> plugin</li>
+  <li>Follow the MainWP setup wizard</li>
+  <li>Add each client site using their MainWP Child security keys</li>
+</ol>
+
+<!-- ============================================================ -->
+<h2>7. Pushing Plugin Updates to All Clients</h2>
+
+<p>When you build a new <code>aquaticpro.zip</code>:</p>
+
+<ol>
+  <li>Go to your MainWP Dashboard site</li>
+  <li>MainWP → Plugins → Upload Plugin → upload <code>aquaticpro.zip</code></li>
+  <li>Select all client sites</li>
+  <li>Click <strong>Update / Activate</strong></li>
+</ol>
+
+<p>All client sites receive the update simultaneously. No manual SSH, no individual logins.</p>
+
+<!-- ============================================================ -->
+<h2>8. Scaling the VPS</h2>
+
+<p>When the CX22 runs low on resources:</p>
+
+<table>
+  <tr><th>Hetzner Plan</th><th>vCPU</th><th>RAM</th><th>Cost</th><th>Approx. sites</th></tr>
+  <tr><td>CX22</td><td>2</td><td>4 GB</td><td>~€4/mo</td><td>10–20</td></tr>
+  <tr><td>CX32</td><td>4</td><td>8 GB</td><td>~€8/mo</td><td>20–50</td></tr>
+  <tr><td>CX42</td><td>8</td><td>16 GB</td><td>~€16/mo</td><td>50–100</td></tr>
+</table>
+
+<p>Hetzner allows live resize — no migration needed. Resize from the Hetzner console in minutes.</p>
+
+<!-- ============================================================ -->
+<h2>9. Backups</h2>
+
+<p>SpinupWP includes scheduled backups. Configure in SpinupWP → Server → Backups:</p>
+<ul>
+  <li><strong>Storage:</strong> Backblaze B2 (cheapest, ~$0.006/GB/mo) or AWS S3</li>
+  <li><strong>Schedule:</strong> Daily database backup, weekly full backup</li>
+  <li><strong>Retention:</strong> 30 days recommended</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2>10. Quick Reference Checklist</h2>
+
+<h3>New client onboarding checklist:</h3>
+<ul>
+  <li>☐ Add DNS A record for <code>clientname.aquaticpro.org</code></li>
+  <li>☐ SpinupWP → Add Site → Clone from template</li>
+  <li>☐ Verify Site URL in WordPress Settings → General</li>
+  <li>☐ Connect to MainWP Dashboard</li>
+  <li>☐ Create admin user for client</li>
+  <li>☐ Enable SpinupWP backups for new site</li>
+  <li>☐ Test AquaticPro plugin loads correctly</li>
+  <li>☐ Test MailPoet sends a test email</li>
+</ul>
+
+<h3>When shipping a plugin update:</h3>
+<ul>
+  <li>☐ Run <code>npm run zip</code> in VS Code</li>
+  <li>☐ Test on template site first</li>
+  <li>☐ MainWP → Upload Plugin → push to all sites</li>
+</ul>
+
+<footer>
+  AquaticPro Internal Documentation &nbsp;|&nbsp; Generated March 2026
+</footer>
+
+</body>
+</html>

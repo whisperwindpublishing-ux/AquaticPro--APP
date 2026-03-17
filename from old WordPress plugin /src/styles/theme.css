@@ -1,0 +1,89 @@
+
+/* src/styles/theme.css */
+
+/* Define custom properties for our theme colors */
+:root {
+    --brand-primary: #2d3748; /* A dark gray, almost black */
+    --brand-primary-hover: #4a5568; /* A slightly lighter gray for hover */
+    --brand-text-primary: #2d3748; /* Dark gray for text */
+    --brand-text-secondary: #718096; /* A medium gray for secondary text */
+    --brand-background: #ffffff; /* White background */
+    --brand-border: #e2e8f0; /* A light gray for borders */
+
+    /* Custom tab colors */
+    --tab-roadmap-active: #059669; /* emerald-600 */
+    --tab-roadmap-bg: #d1fae5; /* emerald-100 */
+    --tab-tasks-active: #2563eb; /* blue-600 */
+    --tab-tasks-bg: #dbeafe; /* blue-100 */
+    --tab-meetings-active: #e11d48; /* rose-600 */
+    --tab-meetings-bg: #ffe4e6; /* rose-100 */
+    --tab-updates-active: #9333ea; /* purple-600 */
+    --tab-updates-bg: #ede9fe; /* purple-100 */
+
+    --tab-roadmap-field-bg: rgba(167, 243, 208, 0.4); /* emerald-200 with 40% opacity */
+    --tab-tasks-field-bg: rgba(191, 219, 254, 0.4); /* blue-200 with 40% opacity */
+    --tab-meetings-field-bg: rgba(255, 204, 211, 0.4); /* rose-200 with 40% opacity */
+    --tab-updates-field-bg: rgba(206, 147, 216, 0.4); /* purple-200 with 40% opacity */
+}
+
+/* General button styling */
+.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.25rem;
+    border-radius: 0.375rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Primary Button */
+.button-primary {
+    background-color: var(--brand-primary);
+    color: var(--brand-background);
+    border-color: var(--brand-primary);
+}
+
+.button-primary:hover {
+    background-color: var(--brand-primary-hover);
+    border-color: var(--brand-primary-hover);
+}
+
+/* Text color utility */
+.text-primary {
+    color: var(--brand-text-primary);
+}
+
+/* Hover text color utility */
+.hover\:text-primary:hover {
+    color: var(--brand-text-primary) !important;
+}
+
+/* Tab styling */
+.tab-button {
+    padding: 0.75rem 1rem;
+    border-bottom: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--brand-text-secondary);
+    transition: color 0.2s, border-color 0.2s;
+}
+
+.tab-button.active {
+    color: #ffffff; /* White text for active tab */
+    border-bottom-color: var(--tab-active-color);
+    font-weight: 600;
+}
+
+.tab-button:hover {
+    color: var(--brand-text-primary);
+}

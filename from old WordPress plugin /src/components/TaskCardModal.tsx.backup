@@ -1,0 +1,952 @@
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+    TaskCard,
+    UserProfile,
+    CardComment,
+    CardAttachment,
+    ChecklistItem,
+    CardActivity,
+    TaskLocation,
+    TaskRole,
+} from '@/types';
+import { getAllUsersWithMetadata, type UserMetadata } from '@/services/api-user-management';
+import { getLocations } from '@/services/api';
+
+// Simple user type for assignment dropdown
+interface SimpleUser {
+    id: number;
+    firstName: string | undefined;
+    lastName: string | undefined;
+    email: string | undefined;
+}
+import {
+    HiXMark,
+    HiOutlinePaperClip,
+    HiOutlineCheckCircle,
+    HiOutlineChatBubbleLeft,
+    HiOutlineClipboardDocumentList,
+    HiOutlineTrash,
+    HiOutlinePlus,
+    HiOutlineCalendar,
+    HiOutlineUser,
+    HiOutlineTag,
+    HiOutlineMapPin,
+} from 'react-icons/hi2';
+
+interface TaskCardModalProps {
+    card: TaskCard;
+    onClose: () => void;
+    currentUser: UserProfile;
+    onUpdate?: () => void;
+}
+
+type TabType = 'details' | 'comments' | 'attachments' | 'checklist' | 'activity';
+
+const TaskCardModal: React.FC<TaskCardModalProps> = ({ card, onClose, currentUser, onUpdate }) => {
+    const [activeTab, setActiveTab] = useState<TabType>('details');
+    
+    // Card details
+    const [title, setTitle] = useState(card.title);
+    const [description, setDescription] = useState(card.description || '');
+    const [assignedTo, setAssignedTo] = useState<number | null>(card.assigned_to || null);
+    const [locationId, setLocationId] = useState<number | null>(card.location_id || null);
+    const [dueDate, setDueDate] = useState(card.due_date || '');
+    const [categoryTag, setCategoryTag] = useState(card.category_tag || '');
+    const [isComplete, setIsComplete] = useState(card.is_complete === 1);
+    
+    // Comments
+    const [comments, setComments] = useState<CardComment[]>([]);
+    const [newComment, setNewComment] = useState('');
+    
+    // Attachments
+    const [attachments, setAttachments] = useState<CardAttachment[]>([]);
+    const [uploadingFile, setUploadingFile] = useState(false);
+    
+    // Checklist
+    const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+    const [newChecklistItem, setNewChecklistItem] = useState('');
+    
+    // Activity
+    const [activities, setActivities] = useState<CardActivity[]>([]);
+    
+    // Users and data for dropdowns
+    const [users, setUsers] = useState<SimpleUser[]>([]);
+    const [roles, setRoles] = useState<TaskRole[]>([]);
+    const [locations, setLocations] = useState<TaskLocation[]>([]);
+    const [availableCategories, setAvailableCategories] = useState<string[]>([]);
+    const [showCategorySuggestions, setShowCategorySuggestions] = useState(false);
+    
+    const [assignedToRole, setAssignedToRole] = useState<number | null>(card.assigned_to_role_id || null);
+    
+    const [saving, setSaving] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    const apiUrl = window.mentorshipPlatformData?.api_url || '/wp-json/mentorship-platform/v1';
+    const nonce = window.mentorshipPlatformData?.nonce || '';
+
+    useEffect(() => {
+        fetchUsers();
+        fetchRoles();
+        fetchLocations();
+        fetchCategories();
+        fetchComments();
+        fetchAttachments();
+        fetchChecklist();
+        fetchActivity();
+        
+        // Save on unmount to prevent data loss
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+            // Force save on unmount - using synchronous approach
+            saveCardDetailsImmediate();
+        };
+    }, []);
+
+    // Debounced auto-save effect
+    useEffect(() => {
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current);
+        }
+        
+        // Auto-save after 1 second of inactivity
+        saveTimeoutRef.current = setTimeout(() => {
+            saveCardDetails();
+        }, 1000);
+        
+        return () => {
+            if (saveTimeoutRef.current) {
+                clearTimeout(saveTimeoutRef.current);
+            }
+        };
+    }, [title, description, assignedTo, assignedToRole, locationId, dueDate, categoryTag, isComplete]);
+
+    const fetchUsers = async () => {
+        try {
+            const usersData = await getAllUsersWithMetadata('false');
+            console.log('Fetched users:', usersData);
+            const formattedUsers: SimpleUser[] = usersData.map((user: UserMetadata) => ({
+                id: user.user_id,
+                firstName: user.first_name,
+                lastName: user.last_name,
+                email: user.user_email,
+            }));
+            setUsers(formattedUsers);
+        } catch (err) {
+            console.error('Failed to fetch users:', err);
+        }
+    };
+
+    const fetchRoles = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskdecks/roles`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Fetched roles:', data);
+                setRoles(data);
+            } else {
+                console.error('Failed to fetch roles, status:', response.status);
+            }
+        } catch (err) {
+            console.error('Failed to fetch roles:', err);
+        }
+    };
+
+    const fetchLocations = async () => {
+        try {
+            const locationsData = await getLocations();
+            console.log('Fetched locations:', locationsData);
+            // Filter to only active locations and map to TaskLocation format
+            const activeLocations: TaskLocation[] = locationsData
+                .filter(loc => loc.is_active)
+                .map(loc => ({
+                    location_id: loc.id,
+                    location_name: loc.name,
+                }));
+            setLocations(activeLocations);
+        } catch (err) {
+            console.error('Failed to fetch locations:', err);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskdecks/categories`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setAvailableCategories(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch categories:', err);
+        }
+    };
+
+    const fetchComments = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/comments`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setComments(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch comments:', err);
+        }
+    };
+
+    const fetchAttachments = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/attachments`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setAttachments(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch attachments:', err);
+        }
+    };
+
+    const fetchChecklist = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/checklist`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setChecklistItems(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch checklist:', err);
+        }
+    };
+
+    const fetchActivity = async () => {
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/activity`, {
+                headers: { 'X-WP-Nonce': nonce },
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setActivities(data);
+            }
+        } catch (err) {
+            console.error('Failed to fetch activity:', err);
+        }
+    };
+
+    const saveCardDetailsImmediate = () => {
+        // Synchronous save for unmount - use sendBeacon or fetch with keepalive
+        const updateData: any = {
+            title,
+            description,
+            assigned_to: assignedTo,
+            assigned_to_role: assignedToRole,
+            location_id: locationId,
+            due_date: dueDate || null,
+            category_tag: categoryTag,
+            is_complete: isComplete ? 1 : 0,
+        };
+
+        // Use fetch with keepalive for unmount saves
+        fetch(`${apiUrl}/taskcards/${card.card_id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-WP-Nonce': nonce,
+            },
+            body: JSON.stringify(updateData),
+            keepalive: true,
+        }).catch(err => console.error('Failed to save on close:', err));
+    };
+
+    const saveCardDetails = async () => {
+        setSaving(true);
+        setError(null);
+
+        try {
+            const updateData: any = {
+                title,
+                description,
+                assigned_to: assignedTo,
+                assigned_to_role: assignedToRole,
+                location_id: locationId,
+                due_date: dueDate || null,
+                category_tag: categoryTag,
+                is_complete: isComplete ? 1 : 0,
+            };
+
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify(updateData),
+            });
+
+            if (!response.ok) throw new Error('Failed to save card');
+
+            setLastSavedTime(new Date());
+            
+            // Refresh activity log (async, don't wait)
+            fetchActivity();
+            
+            // Notify parent to refresh
+            if (onUpdate) {
+                onUpdate();
+            }
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to save card');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const addComment = async () => {
+        if (!newComment.trim()) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify({ comment_text: newComment }),
+            });
+
+            if (!response.ok) throw new Error('Failed to add comment');
+
+            setNewComment('');
+            await fetchComments();
+            await fetchActivity();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add comment');
+        }
+    };
+
+    const deleteComment = async (commentId: number) => {
+        if (!confirm('Delete this comment?')) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/card-comments/${commentId}`, {
+                method: 'DELETE',
+                headers: { 'X-WP-Nonce': nonce },
+            });
+
+            if (!response.ok) throw new Error('Failed to delete comment');
+
+            await fetchComments();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete comment');
+        }
+    };
+
+    const uploadAttachment = async (file: File) => {
+        setUploadingFile(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/attachments`, {
+                method: 'POST',
+                headers: { 'X-WP-Nonce': nonce },
+                body: formData,
+            });
+
+            if (!response.ok) throw new Error('Failed to upload file');
+
+            await fetchAttachments();
+            await fetchActivity();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to upload file');
+        } finally {
+            setUploadingFile(false);
+        }
+    };
+
+    const deleteAttachment = async (attachmentId: number) => {
+        if (!confirm('Delete this attachment?')) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/card-attachments/${attachmentId}`, {
+                method: 'DELETE',
+                headers: { 'X-WP-Nonce': nonce },
+            });
+
+            if (!response.ok) throw new Error('Failed to delete attachment');
+
+            await fetchAttachments();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete attachment');
+        }
+    };
+
+    const addChecklistItem = async () => {
+        if (!newChecklistItem.trim()) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/taskcards/${card.card_id}/checklist`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify({ item_text: newChecklistItem }),
+            });
+
+            if (!response.ok) throw new Error('Failed to add checklist item');
+
+            setNewChecklistItem('');
+            await fetchChecklist();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to add checklist item');
+        }
+    };
+
+    const toggleChecklistItem = async (item: ChecklistItem) => {
+        try {
+            const response = await fetch(`${apiUrl}/checklist-items/${item.checklist_id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-WP-Nonce': nonce,
+                },
+                body: JSON.stringify({ is_complete: item.is_complete === 1 ? 0 : 1 }),
+            });
+
+            if (!response.ok) throw new Error('Failed to update checklist item');
+
+            await fetchChecklist();
+            await fetchActivity();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to update checklist item');
+        }
+    };
+
+    const deleteChecklistItem = async (checklistId: number) => {
+        try {
+            const response = await fetch(`${apiUrl}/checklist-items/${checklistId}`, {
+                method: 'DELETE',
+                headers: { 'X-WP-Nonce': nonce },
+            });
+
+            if (!response.ok) throw new Error('Failed to delete checklist item');
+
+            await fetchChecklist();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to delete checklist item');
+        }
+    };
+
+    const completedChecklistCount = checklistItems.filter((item) => item.is_complete === 1).length;
+    const checklistProgress = checklistItems.length > 0
+        ? Math.round((completedChecklistCount / checklistItems.length) * 100)
+        : 0;
+
+    return (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-gray-200">
+                    <div className="flex-1">
+                        <input
+                            type="text"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="text-2xl font-bold w-full focus:outline-none focus:ring-2 focus:ring-aqua-blue rounded px-2 py-1"
+                        />
+                        <div className="flex items-center gap-3 mt-1">
+                            <p className="text-sm text-gray-500">
+                                Created by {card.creator_name} on {new Date(card.created_at).toLocaleDateString()}
+                            </p>
+                            {saving && <span className="text-xs text-gray-500">• Saving...</span>}
+                            {!saving && lastSavedTime && (
+                                <span className="text-xs text-green-600">
+                                    ✓ Saved {new Date().getTime() - lastSavedTime.getTime() < 5000 ? 'just now' : 'at ' + lastSavedTime.toLocaleTimeString()}
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="ml-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                    >
+                        <HiXMark className="w-6 h-6" />
+                    </button>
+                </div>
+
+                {/* Error Message */}
+                {error && (
+                    <div className="mx-6 mt-4 bg-red-50 border border-red-200 rounded-lg p-3 text-red-800">
+                        {error}
+                    </div>
+                )}
+
+                {/* Tabs */}
+                <div className="flex gap-1 px-6 pt-4 border-b border-gray-200">
+                    {[
+                        { id: 'details' as TabType, label: 'Details', icon: HiOutlineClipboardDocumentList },
+                        { id: 'comments' as TabType, label: 'Comments', icon: HiOutlineChatBubbleLeft, count: comments.length },
+                        { id: 'attachments' as TabType, label: 'Attachments', icon: HiOutlinePaperClip, count: attachments.length },
+                        { id: 'checklist' as TabType, label: 'Checklist', icon: HiOutlineCheckCircle, count: checklistItems.length },
+                        { id: 'activity' as TabType, label: 'Activity', icon: HiOutlineClipboardDocumentList, count: activities.length },
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center gap-2 px-4 py-2 font-medium transition-colors ${
+                                activeTab === tab.id
+                                    ? 'text-aqua-blue border-b-2 border-aqua-blue'
+                                    : 'text-gray-600 hover:text-gray-900'
+                            }`}
+                        >
+                            <tab.icon className="w-5 h-5" />
+                            {tab.label}
+                            {tab.count !== undefined && tab.count > 0 && (
+                                <span className="bg-gray-200 text-gray-700 text-xs px-2 py-0.5 rounded-full">
+                                    {tab.count}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                {/* Tab Content */}
+                <div className="flex-1 overflow-y-auto p-6">
+                    {/* Details Tab */}
+                    {activeTab === 'details' && (
+                        <div className="space-y-6">
+                            {/* Description */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    rows={4}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                    placeholder="Add a description..."
+                                />
+                            </div>
+
+                            {/* Assignment */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                    <HiOutlineUser className="w-5 h-5" />
+                                    Assigned To
+                                </label>
+                                
+                                {/* Assignment Type Toggle */}
+                                <div className="flex gap-2 mb-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignmentType('user')}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            assignmentType === 'user'
+                                                ? 'bg-aqua-blue text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Assign to User
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAssignmentType('role')}
+                                        className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                            assignmentType === 'role'
+                                                ? 'bg-aqua-blue text-white'
+                                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                        }`}
+                                    >
+                                        Assign to Role
+                                    </button>
+                                </div>
+
+                                {/* User Assignment */}
+                                {assignmentType === 'user' && (
+                                    <>
+                                        <select
+                                            value={assignedTo || ''}
+                                            onChange={(e) => {
+                                                setAssignedTo(e.target.value ? Number(e.target.value) : null);
+                                            }}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                        >
+                                            <option value="">Unassigned</option>
+                                            {users.map((user) => (
+                                                <option key={user.id} value={user.id}>
+                                                    {user.firstName} {user.lastName}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {users.length === 0 && (
+                                            <p className="text-xs text-red-600 mt-1">No users found. Check console for errors.</p>
+                                        )}
+                                    </>
+                                )}
+
+                                {/* Role Assignment */}
+                                {assignmentType === 'role' && (
+                                    <select
+                                        value={assignedToRole || ''}
+                                        onChange={(e) => {
+                                            setAssignedToRole(e.target.value ? Number(e.target.value) : null);
+                                        }}
+                                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                    >
+                                        <option value="">No Role Selected</option>
+                                        {roles.map((role) => (
+                                            <option key={role.role_id} value={role.role_id}>
+                                                {role.role_name} {role.tier ? `(Tier ${role.tier})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
+                                )}
+                            </div>
+
+                            {/* Location */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                    <HiOutlineMapPin className="w-5 h-5" />
+                                    Location
+                                </label>
+                                <select
+                                    value={locationId || ''}
+                                    onChange={(e) => {
+                                        setLocationId(e.target.value ? Number(e.target.value) : null);
+                                    }}
+                                    
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                >
+                                    <option value="">No Location</option>
+                                    {locations.map((location) => (
+                                        <option key={location.location_id} value={location.location_id}>
+                                            {location.location_name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Due Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                    <HiOutlineCalendar className="w-5 h-5" />
+                                    Due Date
+                                </label>
+                                <input
+                                    type="datetime-local"
+                                    value={dueDate ? new Date(dueDate).toISOString().slice(0, 16) : ''}
+                                    onChange={(e) => setDueDate(e.target.value)}
+                                    
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                />
+                            </div>
+
+                            {/* Category Tag */}
+                            <div className="relative">
+                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                    <HiOutlineTag className="w-5 h-5" />
+                                    Category
+                                </label>
+                                <input
+                                    type="text"
+                                    value={categoryTag}
+                                    onChange={(e) => setCategoryTag(e.target.value)}
+                                    onFocus={() => setShowCategorySuggestions(true)}
+                                    onBlur={() => {
+                                        setTimeout(() => setShowCategorySuggestions(false), 200);
+                                        saveCardDetails();
+                                    }}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                    placeholder="e.g., Bug, Feature, Enhancement"
+                                />
+                                {showCategorySuggestions && availableCategories.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {availableCategories
+                                            .filter(cat => cat.toLowerCase().includes(categoryTag.toLowerCase()))
+                                            .map((category, index) => (
+                                                <div
+                                                    key={index}
+                                                    onClick={() => {
+                                                        setCategoryTag(category);
+                                                        setShowCategorySuggestions(false);
+                                                        setTimeout(saveCardDetails, 0);
+                                                    }}
+                                                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                >
+                                                    {category}
+                                                </div>
+                                            ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Completion Status */}
+                            <div>
+                                <label className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={isComplete}
+                                        onChange={(e) => {
+                                            setIsComplete(e.target.checked);
+                                            setTimeout(saveCardDetails, 0);
+                                        }}
+                                        className="w-5 h-5 text-aqua-blue focus:ring-aqua-blue rounded"
+                                    />
+                                    <span className="text-sm font-medium text-gray-700">
+                                        Mark as complete
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Comments Tab */}
+                    {activeTab === 'comments' && (
+                        <div className="space-y-4">
+                            {/* New Comment */}
+                            <div className="flex gap-3">
+                                <textarea
+                                    value={newComment}
+                                    onChange={(e) => setNewComment(e.target.value)}
+                                    rows={3}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                    placeholder="Write a comment..."
+                                />
+                                <button
+                                    onClick={addComment}
+                                    disabled={!newComment.trim()}
+                                    className="px-4 py-2 bg-aqua-blue text-white rounded-lg hover:bg-aqua-blue/90 disabled:opacity-50 disabled:cursor-not-allowed h-fit"
+                                >
+                                    Post
+                                </button>
+                            </div>
+
+                            {/* Comments List */}
+                            <div className="space-y-3">
+                                {comments.map((comment) => (
+                                    <div key={comment.comment_id} className="bg-gray-50 rounded-lg p-4">
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div>
+                                                <p className="font-medium text-gray-900">{comment.user_name}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {new Date(comment.created_at).toLocaleString()}
+                                                </p>
+                                            </div>
+                                            {comment.user_id === currentUser.id && (
+                                                <button
+                                                    onClick={() => deleteComment(comment.comment_id)}
+                                                    className="text-red-600 hover:text-red-800"
+                                                >
+                                                    <HiOutlineTrash className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <p className="text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
+                                    </div>
+                                ))}
+                                {comments.length === 0 && (
+                                    <p className="text-center text-gray-500 py-8">No comments yet</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Attachments Tab */}
+                    {activeTab === 'attachments' && (
+                        <div className="space-y-4">
+                            {/* Upload */}
+                            <div>
+                                <label className="block w-full px-4 py-8 border-2 border-dashed border-gray-300 rounded-lg text-center cursor-pointer hover:border-aqua-blue transition-colors">
+                                    <HiOutlinePaperClip className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                                    <span className="text-gray-600">
+                                        {uploadingFile ? 'Uploading...' : 'Click to upload file'}
+                                    </span>
+                                    <input
+                                        type="file"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) uploadAttachment(file);
+                                        }}
+                                        className="hidden"
+                                        disabled={uploadingFile}
+                                    />
+                                </label>
+                            </div>
+
+                            {/* Attachments List */}
+                            <div className="space-y-2">
+                                {attachments.map((attachment) => (
+                                    <div
+                                        key={attachment.attachment_id}
+                                        className="flex items-center justify-between bg-gray-50 rounded-lg p-3"
+                                    >
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <HiOutlinePaperClip className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                                            <div className="min-w-0 flex-1">
+                                                <a
+                                                    href={attachment.file_url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-aqua-blue hover:underline truncate block"
+                                                >
+                                                    {attachment.file_name}
+                                                </a>
+                                                <p className="text-xs text-gray-500">
+                                                    Uploaded by {attachment.user_name} on{' '}
+                                                    {new Date(attachment.uploaded_at).toLocaleDateString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            onClick={() => deleteAttachment(attachment.attachment_id)}
+                                            className="text-red-600 hover:text-red-800 ml-2 flex-shrink-0"
+                                        >
+                                            <HiOutlineTrash className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {attachments.length === 0 && (
+                                    <p className="text-center text-gray-500 py-8">No attachments yet</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Checklist Tab */}
+                    {activeTab === 'checklist' && (
+                        <div className="space-y-4">
+                            {/* Progress */}
+                            {checklistItems.length > 0 && (
+                                <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="text-sm font-medium text-gray-700">Progress</span>
+                                        <span className="text-sm text-gray-600">
+                                            {completedChecklistCount} of {checklistItems.length}
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-2">
+                                        <div
+                                            className="bg-aqua-blue h-2 rounded-full transition-all"
+                                            style={{ width: `${checklistProgress}%` }}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* New Item */}
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={newChecklistItem}
+                                    onChange={(e) => setNewChecklistItem(e.target.value)}
+                                    onKeyPress={(e) => e.key === 'Enter' && addChecklistItem()}
+                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-aqua-blue"
+                                    placeholder="Add checklist item..."
+                                />
+                                <button
+                                    onClick={addChecklistItem}
+                                    disabled={!newChecklistItem.trim()}
+                                    className="px-4 py-2 bg-aqua-blue text-white rounded-lg hover:bg-aqua-blue/90 disabled:opacity-50"
+                                >
+                                    <HiOutlinePlus className="w-5 h-5" />
+                                </button>
+                            </div>
+
+                            {/* Checklist Items */}
+                            <div className="space-y-2">
+                                {checklistItems.map((item) => (
+                                    <div
+                                        key={item.checklist_id}
+                                        className="flex items-center gap-3 bg-gray-50 rounded-lg p-3"
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={item.is_complete === 1}
+                                            onChange={() => toggleChecklistItem(item)}
+                                            className="w-5 h-5 text-aqua-blue focus:ring-aqua-blue rounded"
+                                        />
+                                        <span
+                                            className={`flex-1 ${
+                                                item.is_complete === 1
+                                                    ? 'line-through text-gray-500'
+                                                    : 'text-gray-900'
+                                            }`}
+                                        >
+                                            {item.item_text}
+                                        </span>
+                                        <button
+                                            onClick={() => deleteChecklistItem(item.checklist_id)}
+                                            className="text-red-600 hover:text-red-800"
+                                        >
+                                            <HiOutlineTrash className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                {checklistItems.length === 0 && (
+                                    <p className="text-center text-gray-500 py-8">No checklist items yet</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Activity Tab */}
+                    {activeTab === 'activity' && (
+                        <div className="space-y-3">
+                            {activities.map((activity) => (
+                                <div key={activity.log_id} className="flex gap-3">
+                                    <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
+                                        <span className="text-xs font-medium text-gray-600">
+                                            {activity.user_name?.charAt(0).toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm text-gray-900">
+                                            <span className="font-medium">{activity.user_name}</span>{' '}
+                                            {activity.action}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {new Date(activity.created_at).toLocaleString()}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                            {activities.length === 0 && (
+                                <p className="text-center text-gray-500 py-8">No activity yet</p>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
+                    <p className="text-sm text-gray-600">
+                        {saving ? 'Saving...' : 'All changes are saved automatically'}
+                    </p>
+                    <button
+                        onClick={onClose}
+                        className="px-6 py-2 bg-aqua-blue text-white rounded-lg hover:bg-aqua-blue/90 transition-colors"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default TaskCardModal;
