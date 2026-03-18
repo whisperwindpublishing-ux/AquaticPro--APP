@@ -1858,6 +1858,29 @@ model LmGroup {
   @@map("lm_groups")
 }
 
+// ─── Media Library ───────────────────────────────────────────────────────────
+// Central file/image store. All BlockNote uploads land here.
+// canModerateAll on dailyLogs → see all files; otherwise own only.
+model MediaFile {
+  id          Int      @id @default(autoincrement())
+  uploaderId  Int      @map("uploader_id")
+  fileName    String   @map("file_name")    @db.VarChar(255)
+  fileSize    Int      @map("file_size")
+  mimeType    String   @map("mime_type")    @db.VarChar(100)
+  bucket      String   @db.VarChar(50)
+  storagePath String   @map("storage_path") @db.VarChar(500)
+  publicUrl   String   @map("public_url")   @db.Text
+  altText     String?  @map("alt_text")     @db.VarChar(500)
+  logId       Int?     @map("log_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt           @map("updated_at")
+
+  @@index([uploaderId])
+  @@index([logId])
+  @@index([createdAt])
+  @@map("mp_media_files")
+}
+
 // Lesson Management — Evaluations (lm-evaluation CPT)
 model LmEvaluation {
   id             Int      @id @default(autoincrement())
