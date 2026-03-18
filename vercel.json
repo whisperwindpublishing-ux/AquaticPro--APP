@@ -1,7 +1,17 @@
 {
-  "buildCommand": "cd app && npm run build",
-  "outputDirectory": "app/.next",
-  "installCommand": "cd app && npm install",
-  "framework": "nextjs",
-  "rootDirectory": "app"
+  "rootDirectory": "app",
+  "crons": [
+    {
+      "path": "/api/cron/process-email-queue",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/refresh-caches",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-webhook",
+      "schedule": "0 9 * * 5"
+    }
+  ]
 }
