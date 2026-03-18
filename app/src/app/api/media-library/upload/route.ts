@@ -1,6 +1,6 @@
 /**
  * POST /api/media-library/upload
- * Uploads a file to Supabase Storage (media-library bucket) and records it in the
+ * Uploads a file to Supabase Storage (attachments bucket) and records it in the
  * mp_media_files table.
  *
  * Form fields:
@@ -14,7 +14,7 @@ import { requireSession } from "@/lib/auth/session";
 import { uploadFile, getPublicUrl } from "@/lib/storage/upload";
 import { ok, badRequest, serverError } from "@/lib/utils/api-helpers";
 
-const BUCKET = "media-library";
+const BUCKET = "attachments";
 // 50 MB — generous for video/audio clips
 const MAX_BYTES = 50 * 1024 * 1024;
 
