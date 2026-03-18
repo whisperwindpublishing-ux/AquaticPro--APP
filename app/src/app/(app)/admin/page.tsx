@@ -22,11 +22,11 @@ function TaskIcon()   { return <svg className="h-5 w-5" fill="none" viewBox="0 0
 function LogIcon()    { return <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>; }
 
 const ADMIN_LINKS = [
-  { href: "/new-hires",      label: "New Hire Manager",    desc: "Review and process applicants",          icon: "👤" },
-  { href: "/email-composer", label: "Email Composer",      desc: "Send announcements to staff",            icon: "✉️" },
-  { href: "/foia-export",    label: "FOIA Export",         desc: "Download compliance data extracts",      icon: "📄" },
-  { href: "/career",         label: "Career / Roles",      desc: "Manage job roles and assignments",       icon: "📈" },
-  { href: "/lms-auto-assign",label: "LMS Auto-Assign",     desc: "Configure automatic course assignments", icon: "🏖️" },
+  { href: "/admin/roles",    label: "Job Roles & Permissions", desc: "Create roles, set tiers, configure module access per role", icon: "🛡️" },
+  { href: "/new-hires",      label: "New Hire Manager",        desc: "Review and process applicants",                             icon: "👤" },
+  { href: "/email-composer", label: "Email Composer",          desc: "Send announcements to staff",                               icon: "✉️" },
+  { href: "/foia-export",    label: "FOIA Export",             desc: "Download compliance data extracts",                         icon: "📄" },
+  { href: "/lms-auto-assign",label: "LMS Auto-Assign",         desc: "Configure automatic course assignments",                    icon: "🏖️" },
 ] as const;
 
 const KNOWN_SETTINGS = [
