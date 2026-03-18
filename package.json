@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "cd app && npm install && npm run build",
+    "build:wp": "vite build",
     "build:bento": "cd bento-grid && npm run build",
     "preview": "vite preview",
     "zip": "npm run build && npm run build:bento && bash -c 'rm -f aquaticpro.zip && mkdir -p /tmp/aquaticpro-zip/aquaticpro/bento-grid && cp -r build includes mentorship-platform.php index.html metadata.json /tmp/aquaticpro-zip/aquaticpro/ && cp -r bento-grid/build /tmp/aquaticpro-zip/aquaticpro/bento-grid/ && cd /tmp/aquaticpro-zip && zip -r aquaticpro.zip aquaticpro && mv aquaticpro.zip \"$OLDPWD/\" && rm -rf /tmp/aquaticpro-zip && echo \"Created aquaticpro.zip - upload this via WordPress Plugins > Add New > Upload Plugin\"'"
