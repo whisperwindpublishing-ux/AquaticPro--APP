@@ -55,6 +55,9 @@ export const apiClient = {
   patch: <T>(path: string, body: unknown) =>
     request<T>("PATCH", path, body),
 
+  put: <T>(path: string, body: unknown) =>
+    request<T>("PUT", path, body),
+
   delete: <T>(path: string, params?: Record<string, string>) =>
     request<T>("DELETE", path, undefined, params),
 };
