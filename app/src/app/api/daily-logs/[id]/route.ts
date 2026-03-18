@@ -21,7 +21,7 @@ async function canModerateAll(userId: number): Promise<boolean> {
 async function hydrateLog(log: {
   id: number; authorId: number; locationId: number | null;
   logDate: Date; timeSlotIds: string | null; jobRoleId: number | null;
-  tags: string | null; blocksJson: string | null; status: string;
+  title: string | null; tags: string | null; blocksJson: string | null; status: string;
   createdAt: Date; updatedAt: Date;
 }, currentUserId: number) {
   const [profile, location, reactions, commentCount] = await Promise.all([
@@ -112,6 +112,7 @@ export async function GET(
 
 interface UpdateBody {
   logDate?: string;
+  title?: string | null;
   locationId?: number | null;
   timeSlotIds?: string | null;
   jobRoleId?: number | null;
@@ -158,6 +159,7 @@ export async function PUT(
       where: { id: logId },
       data: {
         ...(body?.logDate      !== undefined && { logDate:     new Date(body.logDate!) }),
+        ...(body?.title        !== undefined && { title:       body.title }),
         ...(body?.locationId   !== undefined && { locationId:  body.locationId }),
         ...(body?.timeSlotIds  !== undefined && { timeSlotIds: body.timeSlotIds }),
         ...(body?.jobRoleId    !== undefined && { jobRoleId:   body.jobRoleId }),

@@ -78,6 +78,7 @@ model DailyLog {
   logDate     DateTime @map("log_date") @db.Date
   timeSlotIds String?  @map("time_slot_ids") // comma-separated IDs
   jobRoleId   Int?     @map("job_role_id")
+  title       String?  @db.VarChar(255)
   tags        String?
   blocksJson  String?  @map("blocks_json") // BlockNote JSON content
   status      String   @default("publish") @db.VarChar(50)

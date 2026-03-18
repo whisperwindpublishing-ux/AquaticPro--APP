@@ -8,16 +8,11 @@ import { apiClient, ApiError } from "@/lib/api-client";
 import { PageHeader } from "@/components/ui";
 import type { Block } from "@blocknote/core";
 
-// BlockNote must be client-only (no SSR)
 const BlockNoteEditor = dynamic(
   () => import("@/components/editor/BlockNoteEditor"),
   { ssr: false, loading: () => <div className="h-32 animate-pulse rounded-lg bg-gray-100" /> }
 );
-
-const MediaLibraryModal = dynamic(
-  () => import("@/components/media/MediaLibraryModal"),
-  { ssr: false }
-);
+const MediaLibraryModal = dynamic(() => import("@/components/media/MediaLibraryModal"), { ssr: false });
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -25,6 +20,7 @@ interface HydratedLog {
   id: number;
   logDate: string;
   authorId: number;
+  title: string | null;
   author: { id: number; name: string; avatarUrl: string | null };
   location: { id: number; name: string } | null;
   timeSlots: Array<{ id: number; label: string; color: string | null }>;
@@ -37,39 +33,14 @@ interface HydratedLog {
   createdAt: string;
 }
 
-interface DateGroup {
-  date: string;
-  logs: HydratedLog[];
-}
-
-interface FeedResponse {
-  groups: DateGroup[];
-  total: number;
-  page: number;
-  limit: number;
-}
-
-interface TimeSlot {
-  id: number;
-  label: string;
-  color: string | null;
-}
-
-interface Location {
-  id: number;
-  name: string;
-}
-
+interface DateGroup  { date: string; logs: HydratedLog[]; }
+interface FeedResponse { groups: DateGroup[]; total: number; page: number; limit: number; }
+interface TimeSlot  { id: number; label: string; color: string | null; slug?: string; sortOrder?: number; isActive?: boolean; }
+interface Location  { id: number; name: string; }
 interface CommentItem {
-  id: number;
-  logId: number;
-  userId: number;
-  content: string;
-  createdAt: string;
+  id: number; logId: number; userId: number; content: string; createdAt: string;
   author: { id: number; name: string; avatarUrl: string | null };
-  reactions: Record<string, number>;
-  myReaction: string | null;
-  isOwn: boolean;
+  reactions: Record<string, number>; myReaction: string | null; isOwn: boolean;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -89,20 +60,17 @@ function fmtDateHeader(iso: string): string {
 
 function fmtRelTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
-  if (diff < 60_000)     return "just now";
-  if (diff < 3_600_000)  return Math.floor(diff / 60_000) + "m ago";
+  if (diff < 60_000)    return "just now";
+  if (diff < 3_600_000) return Math.floor(diff / 60_000) + "m ago";
   if (diff < 86_400_000) return Math.floor(diff / 3_600_000) + "h ago";
   return Math.floor(diff / 86_400_000) + "d ago";
 }
 
 function Avatar({ name, url, size = 8 }: { name: string; url: string | null; size?: number }) {
-  if (url) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={name} className={"h-" + size + " w-" + size + " rounded-full object-cover"} />;
-  }
+  if (url) return <img src={url} alt={name} className={"h-" + size + " w-" + size + " rounded-full object-cover"} />;
   const initials = name.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase();
   return (
-    <div className={"h-" + size + " w-" + size + " rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold text-xs shrink-0"}>
+    <div className={"h-" + size + " w-" + size + " rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-semibold text-xs shrink-0"}>
       {initials || "?"}
     </div>
   );
@@ -122,53 +90,35 @@ function contentPreview(blocksJson: string | null): string {
         }
       }
     }
-    return texts.join(" ").slice(0, 200);
-  } catch {
-    return "";
-  }
+    return texts.join(" ").slice(0, 300);
+  } catch { return ""; }
 }
 
 // ─── Reaction Bar ─────────────────────────────────────────────────────────────
 
-function ReactionBar({
-  reactions,
-  myReaction,
-  onReact,
-  commentCount,
-  onCommentClick,
-}: {
-  reactions: Record<string, number>;
-  myReaction: string | null;
-  onReact: (type: string) => void;
-  commentCount: number;
-  onCommentClick: () => void;
+function ReactionBar({ reactions, myReaction, onReact, commentCount, onCommentClick }: {
+  reactions: Record<string, number>; myReaction: string | null;
+  onReact: (type: string) => void; commentCount: number; onCommentClick: () => void;
 }) {
   return (
     <div className="flex items-center gap-1 flex-wrap">
       {REACTION_TYPES.map((type) => {
-        const count = reactions[type] ?? 0;
+        const count  = reactions[type] ?? 0;
         const active = myReaction === type;
         return (
-          <button
-            key={type}
-            onClick={() => onReact(type)}
+          <button key={type} onClick={() => onReact(type)}
             className={"inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-sm font-medium transition-all " + (
-              active
-                ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
-                : count > 0
-                  ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  : "text-gray-400 hover:bg-gray-100"
-            )}
-          >
+              active ? "bg-purple-100 text-purple-700 ring-1 ring-purple-300"
+              : count > 0 ? "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              : "text-gray-400 hover:bg-gray-100"
+            )}>
             <span>{EMOJI[type]}</span>
             {count > 0 && <span>{count}</span>}
           </button>
         );
       })}
-      <button
-        onClick={onCommentClick}
-        className="ml-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-100 transition-colors"
-      >
+      <button onClick={onCommentClick}
+        className="ml-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm text-gray-500 hover:bg-gray-100 transition-colors">
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
@@ -180,17 +130,9 @@ function ReactionBar({
 
 // ─── Comments Section ─────────────────────────────────────────────────────────
 
-function CommentsSection({
-  logId,
-  currentUserId,
-}: {
-  logId: number;
-  currentUserId: number | undefined;
-}) {
+function CommentsSection({ logId, currentUserId }: { logId: number; currentUserId: number | undefined }) {
   void currentUserId;
-  const { data: comments, loading, refetch } = useApi<CommentItem[]>(
-    `/api/daily-logs/${logId}/comments`
-  );
+  const { data: comments, loading, refetch } = useApi<CommentItem[]>(`/api/daily-logs/${logId}/comments`);
   const [text, setText] = useState("");
   const [submitting, startSubmit] = useTransition();
 
@@ -198,62 +140,39 @@ function CommentsSection({
     e.preventDefault();
     if (!text.trim()) return;
     startSubmit(async () => {
-      await apiClient.post(`/api/daily-logs/${logId}/comments`, { content: text });
+      await fetch(`/api/daily-logs/${logId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: text.trim() }),
+      });
       setText("");
       refetch();
     });
   }, [text, logId, refetch]);
 
   const handleDeleteComment = useCallback(async (commentId: number) => {
-    if (!confirm("Delete this comment?")) return;
     await fetch(`/api/daily-logs/${logId}/comments?commentId=${commentId}`, { method: "DELETE" });
     refetch();
   }, [logId, refetch]);
 
-  const handleCommentReact = useCallback(async (commentId: number, reactionType: string) => {
-    await apiClient.post(`/api/daily-logs/${logId}/reactions`, {
-      reactionType,
-      objectType: "comment",
-      objectId:   commentId,
-    });
-    refetch();
-  }, [logId, refetch]);
+  if (loading) return <div className="px-5 py-3"><span className="text-xs text-gray-400">Loading comments…</span></div>;
 
   return (
-    <div className="mt-4 border-t border-gray-100 pt-4">
-      {loading && <p className="text-sm text-gray-400 py-2">Loading comments…</p>}
+    <div className="px-5 pb-4 border-t border-gray-100 pt-3">
       {comments && comments.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-3 mb-3">
           {comments.map((c) => (
-            <div key={c.id} className="flex gap-3">
+            <div key={c.id} className="flex gap-2.5">
               <Avatar name={c.author.name} url={c.author.avatarUrl} size={7} />
               <div className="flex-1 min-w-0">
-                <div className="rounded-2xl bg-gray-50 px-4 py-2.5">
+                <div className="rounded-2xl bg-gray-50 px-3 py-2">
                   <p className="text-xs font-semibold text-gray-800">{c.author.name}</p>
-                  <p className="mt-0.5 text-sm text-gray-700 whitespace-pre-wrap">{c.content}</p>
+                  <p className="text-sm text-gray-700 mt-0.5 whitespace-pre-wrap">{c.content}</p>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2">
+                <div className="flex items-center gap-2 mt-1 px-1">
                   <span className="text-xs text-gray-400">{fmtRelTime(c.createdAt)}</span>
-                  {REACTION_TYPES.map((type) => {
-                    const count = c.reactions[type] ?? 0;
-                    const active = c.myReaction === type;
-                    return (
-                      <button
-                        key={type}
-                        onClick={() => handleCommentReact(c.id, type)}
-                        className={"text-xs " + (active ? "font-semibold text-blue-600" : "text-gray-400 hover:text-gray-600")}
-                      >
-                        {EMOJI[type]}{count > 0 ? " " + count : ""}
-                      </button>
-                    );
-                  })}
                   {c.isOwn && (
-                    <button
-                      onClick={() => handleDeleteComment(c.id)}
-                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
-                    >
-                      Delete
-                    </button>
+                    <button onClick={() => handleDeleteComment(c.id)} className="text-xs text-gray-400 hover:text-red-500 transition-colors">Delete</button>
                   )}
                 </div>
               </div>
@@ -261,19 +180,12 @@ function CommentsSection({
           ))}
         </div>
       )}
-      <form onSubmit={handleSubmit} className="mt-3 flex gap-2 items-start">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
+      <form onSubmit={handleSubmit} className="flex gap-2 items-start">
+        <input type="text" value={text} onChange={(e) => setText(e.target.value)}
           placeholder="Write a comment…"
-          className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400"
-        />
-        <button
-          type="submit"
-          disabled={!text.trim() || submitting}
-          className="rounded-full bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40 transition-colors"
-        >
+          className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+        <button type="submit" disabled={!text.trim() || submitting}
+          className="rounded-full bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-40 transition-colors">
           Post
         </button>
       </form>
@@ -284,19 +196,17 @@ function CommentsSection({
 // ─── Log Composer ─────────────────────────────────────────────────────────────
 
 function LogComposer({ locations, timeSlots, onCreated, onCancel, defaultDate }: {
-  locations: Location[];
-  timeSlots: TimeSlot[];
-  onCreated: (log: HydratedLog) => void;
-  onCancel: () => void;
-  defaultDate?: string;
+  locations: Location[]; timeSlots: TimeSlot[];
+  onCreated: (log: HydratedLog) => void; onCancel: () => void; defaultDate?: string;
 }) {
-  const [date, setDate]             = useState(defaultDate ?? new Date().toISOString().slice(0, 10));
+  const [date,       setDate]       = useState(defaultDate ?? new Date().toISOString().slice(0, 10));
+  const [title,      setTitle]      = useState("");
   const [locationId, setLocationId] = useState("");
   const [selectedTs, setSelectedTs] = useState<number[]>([]);
-  const [tags, setTags]             = useState("");
-  const [blocks, setBlocks]         = useState<Block[]>([]);
+  const [tags,       setTags]       = useState("");
+  const [blocks,     setBlocks]     = useState<Block[]>([]);
   const [submitting, startSubmit]   = useTransition();
-  const [err, setErr]               = useState<string | null>(null);
+  const [err,        setErr]        = useState<string | null>(null);
 
   function toggleTimeSlot(id: number) {
     setSelectedTs((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -310,6 +220,7 @@ function LogComposer({ locations, timeSlots, onCreated, onCancel, defaultDate }:
       try {
         const payload = {
           logDate:     date,
+          title:       title.trim() || undefined,
           locationId:  locationId ? parseInt(locationId, 10) : undefined,
           timeSlotIds: selectedTs.length > 0 ? selectedTs.join(",") : undefined,
           tags:        tags.trim() || undefined,
@@ -325,63 +236,85 @@ function LogComposer({ locations, timeSlots, onCreated, onCancel, defaultDate }:
   }
 
   return (
-    <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50/40 shadow-sm">
-      <div className="flex items-center gap-2 border-b border-blue-100 px-5 py-3.5">
-        <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="mb-6 rounded-2xl border border-purple-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex items-center gap-2 border-b border-purple-100 bg-purple-50 px-5 py-3.5">
+        <svg className="h-5 w-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
         </svg>
-        <h3 className="text-sm font-semibold text-blue-900">New Daily Log</h3>
+        <h3 className="text-sm font-semibold text-purple-900">New Daily Log</h3>
       </div>
+
       <form onSubmit={handleSubmit} className="p-5 space-y-4">
+        {/* Title */}
+        <div>
+          <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
+          <input type="text" value={title} onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g., Morning Pool Operations"
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+        </div>
+
+        {/* Date + Location */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Log Date <span className="text-red-500">*</span></label>
             <input type="date" value={date} onChange={(e) => setDate(e.target.value)} required
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
             <select value={locationId} onChange={(e) => setLocationId(e.target.value)}
-              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400">
+              className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400">
               <option value="">No location</option>
               {locations.map((l) => <option key={l.id} value={String(l.id)}>{l.name}</option>)}
             </select>
           </div>
         </div>
+
+        {/* Time Slots */}
         {timeSlots.length > 0 && (
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-2">Time Slots</label>
+            <label className="block text-xs font-medium text-gray-600 mb-2">Time Slots <span className="text-gray-400 font-normal">(select all that apply)</span></label>
             <div className="flex flex-wrap gap-2">
-              {timeSlots.map((ts) => (
-                <button key={ts.id} type="button" onClick={() => toggleTimeSlot(ts.id)}
-                  className={"rounded-full px-3 py-1 text-xs font-medium border transition-all " + (selectedTs.includes(ts.id) ? "border-blue-500 bg-blue-500 text-white" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300")}
-                  style={ts.color && selectedTs.includes(ts.id) ? { backgroundColor: ts.color, borderColor: ts.color } : {}}>
-                  {ts.label}
-                </button>
-              ))}
+              {timeSlots.map((ts) => {
+                const selected = selectedTs.includes(ts.id);
+                return (
+                  <button key={ts.id} type="button" onClick={() => toggleTimeSlot(ts.id)}
+                    className={"rounded-full px-3 py-1.5 text-xs font-medium border-2 transition-all " + (selected ? "text-white" : "bg-white")}
+                    style={selected
+                      ? { backgroundColor: ts.color ?? "#7c3aed", borderColor: ts.color ?? "#7c3aed" }
+                      : { borderColor: ts.color ?? "#d1d5db", color: ts.color ?? "#6b7280" }
+                    }>
+                    {ts.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
+
+        {/* Tags */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-1">Tags <span className="text-gray-400 font-normal">(comma-separated)</span></label>
           <input type="text" value={tags} onChange={(e) => setTags(e.target.value)}
             placeholder="lifeguard, inservice, certification"
-            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
         </div>
+
+        {/* Content */}
         <div>
           <label className="block text-xs font-medium text-gray-600 mb-2">Content</label>
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <BlockNoteEditor onChange={setBlocks} editable={true} minHeight={200} />
-          </div>
+          <BlockNoteEditor onChange={setBlocks} editable={true} minHeight={180} />
         </div>
+
         {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
+
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
             Cancel
           </button>
           <button type="submit" disabled={submitting}
-            className="flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            className="flex items-center gap-2 rounded-lg bg-purple-600 px-5 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50 transition-colors">
             {submitting && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
             Publish Log
           </button>
@@ -394,8 +327,7 @@ function LogComposer({ locations, timeSlots, onCreated, onCancel, defaultDate }:
 // ─── Log Card ─────────────────────────────────────────────────────────────────
 
 function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
-  log: HydratedLog;
-  currentUserId: number | undefined;
+  log: HydratedLog; currentUserId: number | undefined;
   onReact: (logId: number, type: string) => void;
   onDeleted: (logId: number) => void;
   onUpdated: (log: HydratedLog) => void;
@@ -403,6 +335,7 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
   const [expanded,     setExpanded]     = useState(false);
   const [editing,      setEditing]      = useState(false);
   const [editBlocks,   setEditBlocks]   = useState<Block[]>([]);
+  const [editTitle,    setEditTitle]    = useState(log.title ?? "");
   const [editTags,     setEditTags]     = useState(log.tags ?? "");
   const [editLocation, setEditLocation] = useState(log.location ? String(log.location.id) : "");
   const [editSlots,    setEditSlots]    = useState<number[]>(log.timeSlots.map((t) => t.id));
@@ -412,8 +345,8 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
 
   const { data: locationsData } = useApi<Location[]>("/api/locations");
   const { data: timeSlotsData } = useApi<TimeSlot[]>("/api/time-slots");
-  const locations = locationsData ?? [];
-  const timeSlots = timeSlotsData ?? [];
+  const locations  = locationsData ?? [];
+  const timeSlots  = timeSlotsData  ?? [];
 
   const isOwn      = currentUserId === log.author.id;
   const preview    = contentPreview(log.blocksJson);
@@ -429,6 +362,7 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
 
   function startEdit() {
     setEditBlocks([]);
+    setEditTitle(log.title ?? "");
     setEditTags(log.tags ?? "");
     setEditLocation(log.location ? String(log.location.id) : "");
     setEditSlots(log.timeSlots.map((t) => t.id));
@@ -441,42 +375,38 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
       setErr(null);
       try {
         const updated = await apiClient.put<HydratedLog>("/api/daily-logs/" + log.id, {
-          tags:        editTags.trim() || null,
+          title:       editTitle.trim() || null,
           locationId:  editLocation ? parseInt(editLocation, 10) : null,
           timeSlotIds: editSlots.length > 0 ? editSlots.join(",") : null,
-          blocksJson:  editBlocks.length > 0 ? JSON.stringify(editBlocks) : log.blocksJson,
+          tags:        editTags.trim() || null,
+          ...(editBlocks.length > 0 ? { blocksJson: JSON.stringify(editBlocks) } : {}),
         });
         onUpdated(updated);
         setEditing(false);
-      } catch {
-        setErr("Failed to save changes.");
+      } catch (e) {
+        setErr(e instanceof ApiError ? String(e.message) : "Failed to save");
       }
     });
   }
 
-  function toggleSlot(id: number) {
+  function toggleEditSlot(id: number) {
     setEditSlots((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
 
-  const initialContent = (() => {
-    if (!log.blocksJson) return undefined;
-    try { return JSON.parse(log.blocksJson) as Block[]; } catch { return undefined; }
-  })();
-
   return (
-    <article className={"rounded-2xl border bg-white shadow-sm overflow-hidden transition-shadow hover:shadow-md " + (editing ? "border-blue-300 ring-2 ring-blue-100" : "border-gray-200")}>
+    <article className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden transition-shadow hover:shadow-md">
       {/* Header */}
-      <div className="flex items-start gap-3 px-5 pt-5 pb-3">
-        <Avatar name={log.author.name} url={log.author.avatarUrl} size={9} />
+      <div className="flex items-start gap-3 px-5 pt-4 pb-2">
+        <Avatar name={log.author.name} url={log.author.avatarUrl} />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-semibold text-gray-900 text-sm">{log.author.name}</span>
-            <span className="text-gray-300">·</span>
-            <span className="text-xs text-gray-500">{fmtRelTime(log.createdAt)}</span>
+          {/* Author + time */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-sm text-gray-900">{log.author.name}</span>
+            <span className="text-xs text-gray-400">{fmtRelTime(log.createdAt)}</span>
             {log.location && (
               <>
                 <span className="text-gray-300">·</span>
-                <span className="inline-flex items-center gap-1 text-xs text-gray-600">
+                <span className="inline-flex items-center gap-1 text-xs text-gray-500">
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -486,12 +416,17 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
               </>
             )}
           </div>
+          {/* Title */}
+          {log.title && (
+            <h3 className="mt-0.5 text-base font-bold text-gray-900 leading-snug">{log.title}</h3>
+          )}
+          {/* Time slot pills */}
           {log.timeSlots.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {log.timeSlots.map((ts) => (
                 <span key={ts.id}
-                  className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium text-white"
-                  style={{ backgroundColor: ts.color ?? "#6366f1" }}>
+                  className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium"
+                  style={{ backgroundColor: (ts.color ?? "#7c3aed") + "1a", borderColor: ts.color ?? "#7c3aed", color: ts.color ?? "#7c3aed" }}>
                   {ts.label}
                 </span>
               ))}
@@ -500,12 +435,14 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
         </div>
         {isOwn && !editing && (
           <div className="flex items-center gap-1 shrink-0">
-            <button onClick={startEdit} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" title="Edit">
+            <button onClick={startEdit}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" title="Edit">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
               </svg>
             </button>
-            <button onClick={handleDelete} disabled={deleting} className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
+            <button onClick={handleDelete} disabled={deleting}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors" title="Delete">
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
@@ -524,13 +461,19 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
       )}
 
       {/* Edit mode */}
-      {editing ? (
+      {editing && (
         <div className="px-5 pb-4 space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Title</label>
+            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)}
+              placeholder="e.g., Morning Pool Operations"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
               <select value={editLocation} onChange={(e) => setEditLocation(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400">
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400">
                 <option value="">No location</option>
                 {locations.map((l) => <option key={l.id} value={String(l.id)}>{l.name}</option>)}
               </select>
@@ -538,63 +481,80 @@ function LogCard({ log, currentUserId, onReact, onDeleted, onUpdated }: {
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Tags</label>
               <input type="text" value={editTags} onChange={(e) => setEditTags(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
             </div>
           </div>
           {timeSlots.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {timeSlots.map((ts) => (
-                <button key={ts.id} type="button" onClick={() => toggleSlot(ts.id)}
-                  className={"rounded-full px-3 py-1 text-xs font-medium border transition-all " + (editSlots.includes(ts.id) ? "border-blue-500 bg-blue-500 text-white" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300")}
-                  style={ts.color && editSlots.includes(ts.id) ? { backgroundColor: ts.color, borderColor: ts.color } : {}}>
-                  {ts.label}
-                </button>
-              ))}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-2">Time Slots</label>
+              <div className="flex flex-wrap gap-2">
+                {timeSlots.map((ts) => {
+                  const sel = editSlots.includes(ts.id);
+                  return (
+                    <button key={ts.id} type="button" onClick={() => toggleEditSlot(ts.id)}
+                      className={"rounded-full px-3 py-1.5 text-xs font-medium border-2 transition-all " + (sel ? "text-white" : "bg-white")}
+                      style={sel
+                        ? { backgroundColor: ts.color ?? "#7c3aed", borderColor: ts.color ?? "#7c3aed" }
+                        : { borderColor: ts.color ?? "#d1d5db", color: ts.color ?? "#6b7280" }
+                      }>
+                      {ts.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
-          <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-            <BlockNoteEditor key={"edit-" + log.id} initialContent={initialContent} onChange={setEditBlocks} editable={true} minHeight={200} />
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">Content</label>
+            <BlockNoteEditor
+              initialContent={log.blocksJson ? JSON.parse(log.blocksJson) : undefined}
+              onChange={setEditBlocks} editable={true} minHeight={150} />
           </div>
           {err && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{err}</p>}
-          <div className="flex justify-end gap-2">
+          <div className="flex gap-2 justify-end">
             <button type="button" onClick={() => setEditing(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+              className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors">
               Cancel
             </button>
-            <button onClick={handleSave} disabled={saving}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors">
+            <button type="button" onClick={handleSave} disabled={saving}
+              className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 disabled:opacity-50 transition-colors">
               {saving && <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
-              Save Changes
+              Save
             </button>
           </div>
         </div>
-      ) : (
-        <div className="px-5">
-          {hasContent ? (
-            expanded ? (
-              <div className="rounded-xl border border-gray-100 bg-gray-50/50 overflow-hidden mb-3">
-                <BlockNoteEditor key={"view-" + log.id} initialContent={initialContent} editable={false} minHeight={100} />
-              </div>
-            ) : (
-              preview && <p className="pb-3 text-sm text-gray-700 line-clamp-3 leading-relaxed">{preview}</p>
-            )
+      )}
+
+      {/* Content preview / full */}
+      {!editing && hasContent && (
+        <div className="px-5 pb-3">
+          {!expanded ? (
+            <div>
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap line-clamp-4">{preview}</p>
+              {preview.length >= 300 && (
+                <button onClick={() => setExpanded(true)}
+                  className="mt-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors">
+                  Show more ↓
+                </button>
+              )}
+            </div>
           ) : (
-            <p className="pb-3 text-sm italic text-gray-400">No content written yet.</p>
-          )}
-          {hasContent && (
-            <button onClick={() => setExpanded((v) => !v)} className="mb-3 text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors">
-              {expanded ? "Show less ↑" : "Show more ↓"}
-            </button>
+            <div>
+              <BlockNoteEditor initialContent={log.blocksJson ? JSON.parse(log.blocksJson) : undefined} editable={false} />
+              <button onClick={() => setExpanded(false)}
+                className="mt-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 transition-colors">
+                Show less ↑
+              </button>
+            </div>
           )}
         </div>
       )}
 
-      {/* Footer */}
+      {/* Reaction bar */}
       {!editing && (
-        <div className="border-t border-gray-100 px-5 py-3">
+        <div className="px-5 pb-3">
           <ReactionBar
-            reactions={log.reactions}
-            myReaction={log.myReaction}
+            reactions={log.reactions} myReaction={log.myReaction}
             onReact={(type) => onReact(log.id, type)}
             commentCount={log.commentCount}
             onCommentClick={() => setExpanded((v) => !v)}
@@ -626,10 +586,10 @@ export default function DailyLogsPage() {
 
   const feedParams: Record<string, string> = {
     page: String(page), grouped: "true", limit: "50",
-    ...(dateFrom ? { dateFrom } : {}),
-    ...(dateTo   ? { dateTo }   : {}),
-    ...(locationFilter ? { locationId: locationFilter } : {}),
-    ...(searchFilter   ? { search: searchFilter }       : {}),
+    ...(dateFrom       ? { dateFrom }                           : {}),
+    ...(dateTo         ? { dateTo }                             : {}),
+    ...(locationFilter ? { locationId: locationFilter }         : {}),
+    ...(searchFilter   ? { search: searchFilter }               : {}),
   };
   const { data: feedData, loading } = useApi<FeedResponse>("/api/daily-logs", feedParams);
 
@@ -643,33 +603,27 @@ export default function DailyLogsPage() {
     setGroups((prev) => {
       const base = prev ?? [];
       const existing = base.find((g) => g.date === newLog.logDate);
-      if (existing) {
-        return base.map((g) => g.date === newLog.logDate ? { ...g, logs: [newLog, ...g.logs] } : g);
-      }
+      if (existing) return base.map((g) => g.date === newLog.logDate ? { ...g, logs: [newLog, ...g.logs] } : g);
       return [...base, { date: newLog.logDate, logs: [newLog] }].sort((a, b) => b.date.localeCompare(a.date));
     });
   }, []);
 
   const handleLogDeleted = useCallback((logId: number) => {
-    setGroups((prev) =>
-      prev
-        ? prev.map((g) => ({ ...g, logs: g.logs.filter((l) => l.id !== logId) })).filter((g) => g.logs.length > 0)
-        : prev
-    );
+    setGroups((prev) => prev
+      ? prev.map((g) => ({ ...g, logs: g.logs.filter((l) => l.id !== logId) })).filter((g) => g.logs.length > 0)
+      : prev);
   }, []);
 
   const handleLogUpdated = useCallback((updated: HydratedLog) => {
     setGroups((prev) => {
       if (!prev) return prev;
-      return prev
-        .map((g) => {
-          if (g.logs.some((l) => l.id === updated.id)) {
-            if (g.date === updated.logDate) return { ...g, logs: g.logs.map((l) => l.id === updated.id ? updated : l) };
-            return { ...g, logs: g.logs.filter((l) => l.id !== updated.id) };
-          }
-          return g;
-        })
-        .filter((g) => g.logs.length > 0);
+      return prev.map((g) => {
+        if (g.logs.some((l) => l.id === updated.id)) {
+          if (g.date === updated.logDate) return { ...g, logs: g.logs.map((l) => l.id === updated.id ? updated : l) };
+          return { ...g, logs: g.logs.filter((l) => l.id !== updated.id) };
+        }
+        return g;
+      }).filter((g) => g.logs.length > 0);
     });
   }, []);
 
@@ -677,12 +631,10 @@ export default function DailyLogsPage() {
     const res = await apiClient.post<{ reactions: Record<string, number>; myReaction: string | null }>(
       "/api/daily-logs/" + logId + "/reactions", { reactionType }
     );
-    setGroups((prev) =>
-      prev ? prev.map((g) => ({
-        ...g,
-        logs: g.logs.map((l) => l.id === logId ? { ...l, reactions: res.reactions, myReaction: res.myReaction } : l),
-      })) : prev
-    );
+    setGroups((prev) => prev ? prev.map((g) => ({
+      ...g,
+      logs: g.logs.map((l) => l.id === logId ? { ...l, reactions: res.reactions, myReaction: res.myReaction } : l),
+    })) : prev);
   }, []);
 
   const activeGroups = groups ?? feedData?.groups ?? [];
@@ -703,7 +655,7 @@ export default function DailyLogsPage() {
             </button>
             {!composerOpen && (
               <button onClick={() => setComposerOpen(true)}
-                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+                className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -714,28 +666,49 @@ export default function DailyLogsPage() {
         }
       />
 
-      {/* Filters */}
+      {/* Location filter buttons */}
+      {locations.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => { setLocationFilter(""); setPage(1); }}
+            className={"rounded-full px-4 py-1.5 text-sm font-medium border-2 transition-all " + (
+              locationFilter === ""
+                ? "bg-purple-600 border-purple-600 text-white"
+                : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-700 bg-white"
+            )}>
+            All Locations
+          </button>
+          {locations.map((loc) => (
+            <button key={loc.id}
+              onClick={() => { setLocationFilter(String(loc.id)); setPage(1); }}
+              className={"rounded-full px-4 py-1.5 text-sm font-medium border-2 transition-all " + (
+                locationFilter === String(loc.id)
+                  ? "bg-purple-600 border-purple-600 text-white"
+                  : "border-gray-200 text-gray-600 hover:border-purple-300 hover:text-purple-700 bg-white"
+              )}>
+              {loc.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Search + date filters */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3">
         <input type="text" value={searchFilter} onChange={(e) => { setSearchFilter(e.target.value); setPage(1); }}
           placeholder="Search tags…"
-          className="flex-1 min-w-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" />
-        {locations.length > 0 && (
-          <select value={locationFilter} onChange={(e) => { setLocationFilter(e.target.value); setPage(1); }}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400">
-            <option value="">All locations</option>
-            {locations.map((l) => <option key={l.id} value={String(l.id)}>{l.name}</option>)}
-          </select>
-        )}
+          className="flex-1 min-w-0 rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" />
         <div className="flex items-center gap-2">
           <input type="date" value={dateFrom} onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" title="From date" />
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" title="From date" />
           <span className="text-gray-400 text-sm">–</span>
           <input type="date" value={dateTo} onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-blue-400 focus:outline-none focus:ring-1 focus:ring-blue-400" title="To date" />
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-purple-400 focus:outline-none focus:ring-1 focus:ring-purple-400" title="To date" />
         </div>
-        {(searchFilter || locationFilter || dateFrom || dateTo) && (
-          <button onClick={() => { setSearchFilter(""); setLocationFilter(""); setDateFrom(""); setDateTo(""); setPage(1); }}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Clear filters</button>
+        {(searchFilter || dateFrom || dateTo) && (
+          <button onClick={() => { setSearchFilter(""); setDateFrom(""); setDateTo(""); setPage(1); }}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            Clear filters
+          </button>
         )}
       </div>
 
@@ -747,7 +720,7 @@ export default function DailyLogsPage() {
       {/* Feed */}
       {loading && !feedData ? (
         <div className="flex justify-center py-16">
-          <span className="h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+          <span className="h-8 w-8 animate-spin rounded-full border-2 border-purple-500 border-t-transparent" />
         </div>
       ) : activeGroups.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-gray-200 py-16 text-gray-400">
@@ -757,7 +730,7 @@ export default function DailyLogsPage() {
           <p className="text-sm font-medium">No daily logs found</p>
           {!composerOpen && (
             <button onClick={() => setComposerOpen(true)}
-              className="mt-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors">
+              className="mt-1 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white hover:bg-purple-700 transition-colors">
               Write the first entry
             </button>
           )}
@@ -766,27 +739,24 @@ export default function DailyLogsPage() {
         <div className="space-y-8">
           {activeGroups.map((group) => (
             <section key={group.date}>
-              <div className="sticky top-0 z-10 mb-4 flex items-center gap-3 bg-white/90 py-2 backdrop-blur-sm">
-                <h2 className="text-sm font-bold text-gray-900">{fmtDateHeader(group.date)}</h2>
-                <div className="flex-1 border-t border-gray-200" />
-                <span className="shrink-0 text-xs text-gray-400">
-                  {group.logs.length} entr{group.logs.length === 1 ? "y" : "ies"}
-                </span>
+              {/* Purple date header — matches WordPress style */}
+              <div className="sticky top-0 z-10 mb-4">
+                <div className="flex items-center justify-between rounded-lg bg-purple-600 px-4 py-2 shadow-sm">
+                  <h2 className="text-sm font-bold text-white">{fmtDateHeader(group.date)}</h2>
+                  <span className="text-xs text-purple-200">
+                    {group.logs.length} {group.logs.length === 1 ? "entry" : "entries"}
+                  </span>
+                </div>
               </div>
               <div className="space-y-4">
                 {group.logs.map((log) => (
-                  <LogCard
-                    key={log.id}
-                    log={log}
-                    currentUserId={currentUserId}
-                    onReact={handleReact}
-                    onDeleted={handleLogDeleted}
-                    onUpdated={handleLogUpdated}
-                  />
+                  <LogCard key={log.id} log={log} currentUserId={currentUserId}
+                    onReact={handleReact} onDeleted={handleLogDeleted} onUpdated={handleLogUpdated} />
                 ))}
               </div>
             </section>
           ))}
+
           {feedData && feedData.total > feedData.limit && (
             <div className="flex items-center justify-center gap-3 pt-4">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}

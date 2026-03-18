@@ -6,6 +6,7 @@ import { ok, created, badRequest, forbidden, serverError, parseBody } from "@/li
 
 interface LogBody {
   logDate: string;
+  title?: string;
   locationId?: number;
   timeSlotIds?: string;
   jobRoleId?: number;
@@ -24,8 +25,8 @@ async function canModerate(userId: number, roleIds: number[]): Promise<boolean> 
 
 type RawLog = {
   id: number; authorId: number; locationId: number | null; logDate: Date;
-  timeSlotIds: string | null; jobRoleId: number | null; tags: string | null;
-  blocksJson: string | null; status: string; createdAt: Date; updatedAt: Date;
+  timeSlotIds: string | null; jobRoleId: number | null; title: string | null;
+  tags: string | null; blocksJson: string | null; status: string; createdAt: Date; updatedAt: Date;
 };
 
 async function hydrateLogs(logs: RawLog[], currentUserId: number) {
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
     const log = await prisma.dailyLog.create({
       data: {
         authorId: user.id, logDate: new Date(body.logDate),
+        title: body.title?.trim() || null,
         locationId: body.locationId ?? null, timeSlotIds: body.timeSlotIds ?? null,
         jobRoleId: body.jobRoleId ?? null, tags: body.tags ?? null,
         blocksJson: body.blocksJson ?? null, status: body.status ?? "publish",
