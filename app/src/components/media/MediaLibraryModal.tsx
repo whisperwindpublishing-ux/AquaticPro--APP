@@ -84,10 +84,13 @@ export default function MediaLibraryModal({
       const formData = new FormData();
       formData.append("file", file);
       const res = await fetch("/api/media-library/upload", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body?.error ?? `Server error ${res.status}`);
+      }
       await refetch();
-    } catch {
-      setUploadErr("Upload failed. Please try again.");
+    } catch (err) {
+      setUploadErr(err instanceof Error ? err.message : "Upload failed. Please try again.");
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
