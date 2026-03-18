@@ -1,5 +1,6 @@
 {
   "framework": "nextjs",
+  "outputDirectory": "app/.next",
   "crons": [
     {
       "path": "/api/cron/process-email-queue",
