@@ -19,7 +19,7 @@ export default function EmailComposerPage() {
   const [sending, setSending]     = useState(false);
   const [sent, setSent]           = useState(false);
 
-  const inputCls = "ap-w-full ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm focus:ap-border-brand-500 focus:ap-outline-none";
+  const inputCls = "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none";
 
   if (!permissions?.isAdmin) return <EmptyState title="Access denied" description="Admin access required." />;
   if (loading) return <FullPageSpinner />;
@@ -43,20 +43,20 @@ export default function EmailComposerPage() {
   }
 
   return (
-    <div className="ap-mx-auto ap-max-w-4xl ap-space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <PageHeader title="Email Composer" description="Compose and send emails to staff members." />
 
-      <div className="ap-grid ap-gap-4 lg:ap-grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* Templates sidebar */}
-        <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-4 ap-shadow-sm">
-          <h2 className="ap-mb-3 ap-text-xs ap-font-semibold ap-uppercase ap-tracking-wider ap-text-gray-400">Templates</h2>
+        <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Templates</h2>
           {data.templates.length === 0 ? (
-            <p className="ap-text-xs ap-text-gray-400">No templates saved</p>
+            <p className="text-xs text-gray-400">No templates saved</p>
           ) : (
-            <ul className="ap-space-y-1">
+            <ul className="space-y-1">
               {data.templates.map(t => (
                 <li key={t.id}>
-                  <button onClick={() => loadTemplate(t)} className="ap-w-full ap-rounded-lg ap-px-3 ap-py-2 ap-text-left ap-text-sm ap-text-gray-700 hover:ap-bg-gray-50 ap-transition-colors">
+                  <button onClick={() => loadTemplate(t)} className="w-full rounded-lg px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 transition-colors">
                     {t.name}
                   </button>
                 </li>
@@ -66,22 +66,22 @@ export default function EmailComposerPage() {
         </div>
 
         {/* Compose form */}
-        <div className="lg:ap-col-span-2 ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-5 ap-shadow-sm">
-          {sent && <div className="ap-mb-4 ap-rounded-lg ap-bg-green-50 ap-px-4 ap-py-2 ap-text-sm ap-text-green-700">✓ Email sent successfully!</div>}
-          <form onSubmit={send} className="ap-space-y-4">
+        <div className="lg:col-span-2 rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+          {sent && <div className="mb-4 rounded-lg bg-green-50 px-4 py-2 text-sm text-green-700">✓ Email sent successfully!</div>}
+          <form onSubmit={send} className="space-y-4">
             <div>
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Recipient User IDs <span className="ap-text-gray-400">(comma-separated)</span></label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Recipient User IDs <span className="text-gray-400">(comma-separated)</span></label>
               <input className={inputCls} value={recipients} onChange={e => setRecipients(e.target.value)} placeholder="1, 2, 3" required />
             </div>
             <div>
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Subject</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Subject</label>
               <input className={inputCls} value={subject} onChange={e => setSubject(e.target.value)} required />
             </div>
             <div>
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Body</label>
-              <textarea className={`${inputCls} ap-h-48 ap-resize-none ap-font-mono ap-text-xs`} value={body} onChange={e => setBody(e.target.value)} required />
+              <label className="mb-1 block text-xs font-medium text-gray-600">Body</label>
+              <textarea className={`${inputCls} h-48 resize-none font-mono text-xs`} value={body} onChange={e => setBody(e.target.value)} required />
             </div>
-            <div className="ap-flex ap-justify-end">
+            <div className="flex justify-end">
               <Button type="submit" disabled={sending}>{sending ? "Sending…" : "Send Email"}</Button>
             </div>
           </form>

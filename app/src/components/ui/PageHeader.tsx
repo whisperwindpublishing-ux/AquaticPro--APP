@@ -16,16 +16,16 @@ export function PageHeader({ title, subtitle, description, right, children }: Pa
   const sub = subtitle ?? description;
   const actions = right ?? children;
   return (
-    <div className="ap-mb-6 ap-flex ap-items-start ap-justify-between ap-gap-4">
+    <div className="mb-6 flex items-start justify-between gap-4">
       <div>
-        <h1 className="ap-text-2xl ap-font-bold ap-tracking-tight ap-text-gray-900">
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
           {title}
         </h1>
         {sub && (
-          <p className="ap-mt-0.5 ap-text-sm ap-text-gray-500">{sub}</p>
+          <p className="mt-0.5 text-sm text-gray-500">{sub}</p>
         )}
       </div>
-      {actions && <div className="ap-flex ap-shrink-0 ap-items-center ap-gap-2">{actions}</div>}
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
   );
 }

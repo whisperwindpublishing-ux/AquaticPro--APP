@@ -1,5 +1,5 @@
-/* Tailwind v4 — prefix all utilities with 'ap-' to avoid conflicts with WordPress themes */
-@import "tailwindcss" prefix(ap);
+/* Tailwind v4 */
+@import "tailwindcss";
 
 /* ============================================
    AquaticPro Design Tokens

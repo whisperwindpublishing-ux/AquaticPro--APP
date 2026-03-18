@@ -24,18 +24,18 @@ function DeckGrid({ onSelect }: { onSelect: (id: number) => void }) {
   if (!data?.decks.length) return <EmptyState title="No decks found" description="Ask your admin to create a task deck." />;
 
   return (
-    <div className="ap-grid ap-grid-cols-1 ap-gap-4 sm:ap-grid-cols-2 lg:ap-grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {data.decks.map((d) => (
         <button
           key={d.id}
           onClick={() => onSelect(d.id)}
-          className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-5 ap-text-left ap-shadow-sm ap-transition-shadow hover:ap-shadow-md"
+          className="rounded-xl border border-gray-100 bg-white p-5 text-left shadow-sm transition-shadow hover:shadow-md"
         >
-          <div className="ap-flex ap-items-start ap-justify-between ap-gap-2">
-            <h3 className="ap-text-sm ap-font-semibold ap-text-gray-900">{d.deckName}</h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm font-semibold text-gray-900">{d.deckName}</h3>
             {d.isPublic && <Badge variant="info">Public</Badge>}
           </div>
-          {d.description && <p className="ap-mt-1.5 ap-text-xs ap-text-gray-500 ap-line-clamp-2">{d.description}</p>}
+          {d.description && <p className="mt-1.5 text-xs text-gray-500 line-clamp-2">{d.description}</p>}
         </button>
       ))}
     </div>
@@ -47,21 +47,21 @@ function DeckGrid({ onSelect }: { onSelect: (id: number) => void }) {
 function KanbanCard({ card, onToggle }: { card: Card; onToggle: (id: number, done: boolean) => void }) {
   const overdue = card.dueDate && !card.isComplete && new Date(card.dueDate) < new Date();
   return (
-    <div className={`ap-rounded-lg ap-border ap-bg-white ap-p-3 ap-shadow-sm ${card.isComplete ? "ap-opacity-60" : ""}`}>
-      <div className="ap-flex ap-items-start ap-gap-2">
+    <div className={`rounded-lg border bg-white p-3 shadow-sm ${card.isComplete ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-2">
         <input
           type="checkbox"
           checked={card.isComplete}
           onChange={() => onToggle(card.id, !card.isComplete)}
-          className="ap-mt-0.5 ap-h-4 ap-w-4 ap-cursor-pointer ap-rounded ap-border-gray-300"
+          className="mt-0.5 h-4 w-4 cursor-pointer rounded border-gray-300"
         />
-        <div className="ap-min-w-0 ap-flex-1">
-          <p className={`ap-text-sm ap-font-medium ${card.isComplete ? "ap-line-through ap-text-gray-400" : "ap-text-gray-800"}`}>
+        <div className="min-w-0 flex-1">
+          <p className={`text-sm font-medium ${card.isComplete ? "line-through text-gray-400" : "text-gray-800"}`}>
             {card.title}
           </p>
-          {card.description && <p className="ap-mt-0.5 ap-text-xs ap-text-gray-400 ap-line-clamp-2">{card.description}</p>}
+          {card.description && <p className="mt-0.5 text-xs text-gray-400 line-clamp-2">{card.description}</p>}
           {card.dueDate && (
-            <p className={`ap-mt-1 ap-text-xs ap-font-medium ${overdue ? "ap-text-error-600" : "ap-text-gray-400"}`}>
+            <p className={`mt-1 text-xs font-medium ${overdue ? "text-error-600" : "text-gray-400"}`}>
               Due {new Date(card.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </p>
           )}
@@ -110,27 +110,27 @@ function KanbanBoard({ deckId, onBack }: { deckId: number; onBack: () => void })
         subtitle={data.deck.description ?? undefined}
         right={<Button variant="ghost" size="sm" onClick={onBack}>← Back to Decks</Button>}
       />
-      <div className="ap-flex ap-gap-4 ap-overflow-x-auto ap-pb-4">
+      <div className="flex gap-4 overflow-x-auto pb-4">
         {data.lists.map((list) => (
-          <div key={list.id} className="ap-w-72 ap-shrink-0">
-            <div className="ap-mb-2 ap-flex ap-items-center ap-justify-between">
-              <h3 className="ap-text-sm ap-font-semibold ap-text-gray-700">{list.listName}</h3>
-              <span className="ap-text-xs ap-text-gray-400">{byList[list.id]?.length ?? 0}</span>
+          <div key={list.id} className="w-72 shrink-0">
+            <div className="mb-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">{list.listName}</h3>
+              <span className="text-xs text-gray-400">{byList[list.id]?.length ?? 0}</span>
             </div>
-            <div className="ap-space-y-2 ap-rounded-xl ap-border ap-border-gray-100 ap-bg-gray-50 ap-p-2 ap-min-h-24">
+            <div className="space-y-2 rounded-xl border border-gray-100 bg-gray-50 p-2 min-h-24">
               {(byList[list.id] ?? []).map((card) => (
                 <KanbanCard key={card.id} card={card} onToggle={toggleCard} />
               ))}
               {newCardListId === list.id ? (
-                <div className="ap-rounded-lg ap-border ap-border-brand-200 ap-bg-white ap-p-2">
+                <div className="rounded-lg border border-brand-200 bg-white p-2">
                   <input
                     autoFocus value={newCardTitle}
                     onChange={(e) => setNewCardTitle(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && addCard(list.id)}
                     placeholder="Card title…"
-                    className="ap-w-full ap-bg-transparent ap-p-1 ap-text-sm ap-text-gray-800 focus:ap-outline-none"
+                    className="w-full bg-transparent p-1 text-sm text-gray-800 focus:outline-none"
                   />
-                  <div className="ap-mt-2 ap-flex ap-gap-1.5">
+                  <div className="mt-2 flex gap-1.5">
                     <Button size="sm" loading={submitting} onClick={() => addCard(list.id)}>Add</Button>
                     <Button size="sm" variant="ghost" onClick={() => { setNewCardListId(null); setNewCardTitle(""); }}>Cancel</Button>
                   </div>
@@ -138,9 +138,9 @@ function KanbanBoard({ deckId, onBack }: { deckId: number; onBack: () => void })
               ) : (
                 <button
                   onClick={() => { setNewCardListId(list.id); setNewCardTitle(""); }}
-                  className="ap-flex ap-w-full ap-items-center ap-gap-1 ap-rounded-lg ap-px-2 ap-py-1.5 ap-text-xs ap-text-gray-400 hover:ap-bg-gray-100 hover:ap-text-gray-600"
+                  className="flex w-full items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-gray-400 hover:bg-gray-100 hover:text-gray-600"
                 >
-                  <svg className="ap-h-3.5 ap-w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   Add card
@@ -160,10 +160,10 @@ export default function TaskDeckPage() {
   const [activeDeckId, setActiveDeckId] = useState<number | null>(null);
 
   if (activeDeckId !== null)
-    return <div className="ap-mx-auto ap-max-w-full"><KanbanBoard deckId={activeDeckId} onBack={() => setActiveDeckId(null)} /></div>;
+    return <div className="mx-auto max-w-full"><KanbanBoard deckId={activeDeckId} onBack={() => setActiveDeckId(null)} /></div>;
 
   return (
-    <div className="ap-mx-auto ap-max-w-4xl">
+    <div className="mx-auto max-w-4xl">
       <PageHeader title="Task Deck" subtitle="Manage your task boards and cards" />
       <DeckGrid onSelect={setActiveDeckId} />
     </div>

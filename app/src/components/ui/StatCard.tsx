@@ -9,25 +9,25 @@ interface StatCardProps {
 }
 
 const COLOR: Record<NonNullable<StatCardProps["color"]>, { icon: string; value: string }> = {
-  blue:   { icon: "ap-bg-brand-100 ap-text-brand-600",       value: "ap-text-brand-700" },
-  green:  { icon: "ap-bg-success-100 ap-text-success-600",   value: "ap-text-success-700" },
-  amber:  { icon: "ap-bg-warning-100 ap-text-warning-600",   value: "ap-text-warning-700" },
-  purple: { icon: "ap-bg-lavender-100 ap-text-lavender-600", value: "ap-text-lavender-700" },
-  red:    { icon: "ap-bg-error-100 ap-text-error-600",       value: "ap-text-error-700" },
+  blue:   { icon: "bg-brand-100 text-brand-600",       value: "text-brand-700" },
+  green:  { icon: "bg-success-100 text-success-600",   value: "text-success-700" },
+  amber:  { icon: "bg-warning-100 text-warning-600",   value: "text-warning-700" },
+  purple: { icon: "bg-lavender-100 text-lavender-600", value: "text-lavender-700" },
+  red:    { icon: "bg-error-100 text-error-600",       value: "text-error-700" },
 };
 
 export function StatCard({ label, value, sub, icon, color = "blue" }: StatCardProps) {
   const c = COLOR[color];
   return (
-    <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-5 ap-shadow-sm">
-      <div className="ap-flex ap-items-start ap-justify-between">
+    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+      <div className="flex items-start justify-between">
         <div>
-          <p className="ap-text-sm ap-font-medium ap-text-gray-500">{label}</p>
-          <p className={`ap-mt-1 ap-text-3xl ap-font-bold ${c.value}`}>{value}</p>
-          {sub && <p className="ap-mt-1 ap-text-xs ap-text-gray-400">{sub}</p>}
+          <p className="text-sm font-medium text-gray-500">{label}</p>
+          <p className={`mt-1 text-3xl font-bold ${c.value}`}>{value}</p>
+          {sub && <p className="mt-1 text-xs text-gray-400">{sub}</p>}
         </div>
         {icon && (
-          <div className={`ap-rounded-lg ap-p-2.5 ${c.icon}`}>{icon}</div>
+          <div className={`rounded-lg p-2.5 ${c.icon}`}>{icon}</div>
         )}
       </div>
     </div>

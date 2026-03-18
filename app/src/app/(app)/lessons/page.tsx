@@ -16,9 +16,9 @@ interface Lesson {
 }
 
 function StatusDot({ status }: { status?: string | null }) {
-  if (status === "completed") return <span className="ap-h-2.5 ap-w-2.5 ap-rounded-full ap-bg-green-500 ap-block" />;
-  if (status === "in-progress") return <span className="ap-h-2.5 ap-w-2.5 ap-rounded-full ap-bg-brand-400 ap-block" />;
-  return <span className="ap-h-2.5 ap-w-2.5 ap-rounded-full ap-bg-gray-200 ap-block" />;
+  if (status === "completed") return <span className="h-2.5 w-2.5 rounded-full bg-green-500 block" />;
+  if (status === "in-progress") return <span className="h-2.5 w-2.5 rounded-full bg-brand-400 block" />;
+  return <span className="h-2.5 w-2.5 rounded-full bg-gray-200 block" />;
 }
 
 export default function LessonsPage() {
@@ -29,8 +29,8 @@ export default function LessonsPage() {
   );
 
   if (!courseId) return (
-    <div className="ap-mx-auto ap-max-w-4xl">
-      <EmptyState title="No course selected" description={<Link href="/courses" className="ap-text-brand-600 hover:ap-underline">← Back to Courses</Link>} />
+    <div className="mx-auto max-w-4xl">
+      <EmptyState title="No course selected" description={<Link href="/courses" className="text-brand-600 hover:underline">← Back to Courses</Link>} />
     </div>
   );
   if (loading) return <FullPageSpinner />;
@@ -39,29 +39,29 @@ export default function LessonsPage() {
   const lessons = data.lessons ?? [];
 
   return (
-    <div className="ap-mx-auto ap-max-w-3xl ap-space-y-4">
+    <div className="mx-auto max-w-3xl space-y-4">
       <PageHeader
         title={data.course?.title ?? "Lessons"}
-        description={<Link href="/courses" className="ap-text-xs ap-text-brand-600 hover:ap-underline">← Back to Courses</Link>}
+        description={<Link href="/courses" className="text-xs text-brand-600 hover:underline">← Back to Courses</Link>}
       />
       {lessons.length === 0 ? (
         <EmptyState title="No lessons in this course" description="Content will appear here once available." />
       ) : (
-        <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-shadow-sm ap-divide-y ap-divide-gray-50">
+        <div className="rounded-xl border border-gray-100 bg-white shadow-sm divide-y divide-gray-50">
           {lessons.map((lesson, idx) => (
             <Link
               key={lesson.id}
               href={`/whiteboard?lessonId=${lesson.id}`}
-              className="ap-flex ap-items-center ap-gap-4 ap-px-5 ap-py-4 hover:ap-bg-gray-50 ap-transition-colors"
+              className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 transition-colors"
             >
-              <span className="ap-flex ap-h-8 ap-w-8 ap-shrink-0 ap-items-center ap-justify-center ap-rounded-full ap-bg-gray-100 ap-text-xs ap-font-semibold ap-text-gray-500">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-semibold text-gray-500">
                 {idx + 1}
               </span>
-              <div className="ap-flex-1 ap-min-w-0">
-                <p className="ap-text-sm ap-font-medium ap-text-gray-900 ap-truncate">{lesson.title}</p>
-                <div className="ap-flex ap-items-center ap-gap-2 ap-mt-0.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{lesson.title}</p>
+                <div className="flex items-center gap-2 mt-0.5">
                   <Badge variant="default">{lesson.lessonType}</Badge>
-                  {lesson.estimatedTime && <span className="ap-text-xs ap-text-gray-400">{lesson.estimatedTime}</span>}
+                  {lesson.estimatedTime && <span className="text-xs text-gray-400">{lesson.estimatedTime}</span>}
                 </div>
               </div>
               <StatusDot status={lesson.progress?.status} />

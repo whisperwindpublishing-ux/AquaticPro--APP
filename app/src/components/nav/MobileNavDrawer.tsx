@@ -11,7 +11,7 @@ import SignOutButton from "@/components/auth/SignOutButton";
 
 function Icon({ d }: { d: string }) {
   return (
-    <svg className="ap-h-5 ap-w-5 ap-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
       <path strokeLinecap="round" strokeLinejoin="round" d={d} />
     </svg>
   );
@@ -48,11 +48,11 @@ function NavItem({ href, icon, label, onClick }: NavItemProps) {
       href={href}
       onClick={onClick}
       className={[
-        "ap-flex ap-items-center ap-gap-3 ap-rounded-lg ap-px-3 ap-py-2.5 ap-text-sm ap-font-medium ap-transition-colors",
-        active ? "ap-bg-white/10 ap-text-white" : "ap-text-slate-400 hover:ap-bg-white/5 hover:ap-text-slate-200",
+        "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+        active ? "bg-white/10 text-white" : "text-slate-400 hover:bg-white/5 hover:text-slate-200",
       ].join(" ")}
     >
-      <span className={active ? "ap-text-sky-400" : "ap-text-slate-500"}>
+      <span className={active ? "text-sky-400" : "text-slate-500"}>
         <Icon d={icon} />
       </span>
       {label}
@@ -62,7 +62,7 @@ function NavItem({ href, icon, label, onClick }: NavItemProps) {
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <p className="ap-mb-1 ap-mt-5 ap-px-3 ap-text-[10px] ap-font-semibold ap-uppercase ap-tracking-widest ap-text-slate-500">
+    <p className="mb-1 mt-5 px-3 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
       {children}
     </p>
   );
@@ -94,9 +94,9 @@ export function MobileNavDrawer({ user, permissions }: Props) {
       <button
         aria-label="Open navigation"
         onClick={() => setOpen(true)}
-        className="ap-flex ap-items-center ap-justify-center ap-rounded-lg ap-p-2 ap-text-slate-300 hover:ap-bg-white/10 active:ap-scale-95 ap-transition-all"
+        className="flex items-center justify-center rounded-lg p-2 text-slate-300 hover:bg-white/10 active:scale-95 transition-all"
       >
-        <svg className="ap-h-5 ap-w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>
@@ -104,7 +104,7 @@ export function MobileNavDrawer({ user, permissions }: Props) {
       {/* Backdrop */}
       {open && (
         <div
-          className="ap-fixed ap-inset-0 ap-z-40 ap-bg-gray-900/40 ap-backdrop-blur-sm"
+          className="fixed inset-0 z-40 bg-gray-900/40 backdrop-blur-sm"
           aria-hidden="true"
           onClick={close}
         />
@@ -113,32 +113,32 @@ export function MobileNavDrawer({ user, permissions }: Props) {
       {/* Drawer */}
       <aside
         className={[
-          "ap-fixed ap-inset-y-0 ap-left-0 ap-z-50 ap-flex ap-w-72 ap-flex-col ap-bg-slate-900 ap-shadow-2xl ap-transition-transform ap-duration-300",
-          open ? "ap-translate-x-0" : "ap--translate-x-full",
+          "fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-slate-900 shadow-2xl transition-transform duration-300",
+          open ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
         {/* Brand header */}
-        <div className="ap-flex ap-h-16 ap-items-center ap-justify-between ap-border-b ap-border-white/10 ap-px-5">
-          <div className="ap-flex ap-items-center ap-gap-2">
+        <div className="flex h-16 items-center justify-between border-b border-white/10 px-5">
+          <div className="flex items-center gap-2">
             <div
-              className="ap-h-8 ap-w-8 ap-rounded-lg ap-shrink-0"
+              className="h-8 w-8 rounded-lg shrink-0"
               style={{ background: "linear-gradient(135deg, #0004ff, #12a4ff, #9f0fff, #f538f2)" }}
             />
-            <span className="ap-text-base ap-font-bold ap-text-white">AquaticPro</span>
+            <span className="text-base font-bold text-white">AquaticPro</span>
           </div>
           <button
             onClick={close}
             aria-label="Close navigation"
-            className="ap-flex ap-items-center ap-justify-center ap-rounded-lg ap-p-1.5 ap-text-slate-400 hover:ap-bg-white/10"
+            className="flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-white/10"
           >
-            <svg className="ap-h-5 ap-w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="ap-flex-1 ap-overflow-y-auto ap-px-3 ap-py-3">
+        <nav className="flex-1 overflow-y-auto px-3 py-3">
           <SectionLabel>Core</SectionLabel>
           <NavItem href="/dashboard" icon={icons.dashboard} label="Dashboard" onClick={close} />
           {modules.dailyLogs     && <NavItem href="/daily-logs" icon={icons.logs}      label="Daily Logs"    onClick={close} />}
@@ -183,15 +183,15 @@ export function MobileNavDrawer({ user, permissions }: Props) {
         </nav>
 
         {/* Footer */}
-        <div className="ap-border-t ap-border-white/10 ap-p-3">
-          <div className="ap-flex ap-items-center ap-gap-3 ap-rounded-lg ap-px-2 ap-py-2 hover:ap-bg-white/5 ap-transition-colors">
-            <div className="ap-flex ap-h-8 ap-w-8 ap-shrink-0 ap-items-center ap-justify-center ap-rounded-full ap-text-sm ap-font-bold ap-text-white"
+        <div className="border-t border-white/10 p-3">
+          <div className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/5 transition-colors">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                  style={{ background: "linear-gradient(135deg, #0004ff, #9f0fff)" }}>
               {user.displayName.charAt(0).toUpperCase()}
             </div>
-            <div className="ap-min-w-0 ap-flex-1">
-              <p className="ap-truncate ap-text-sm ap-font-medium ap-text-slate-200">{user.displayName}</p>
-              <p className="ap-truncate ap-text-xs ap-text-slate-500">{user.email}</p>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-slate-200">{user.displayName}</p>
+              <p className="truncate text-xs text-slate-500">{user.email}</p>
             </div>
             <SignOutButton iconOnly />
           </div>

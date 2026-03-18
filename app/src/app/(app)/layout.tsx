@@ -20,22 +20,22 @@ export default async function AppLayout({
   const permissions = await resolvePermissions(user.id);
 
   return (
-    <div className="ap-flex ap-min-h-screen ap-bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar — hidden on mobile, shown lg+ */}
-      <div className="ap-hidden ap-h-screen ap-sticky ap-top-0 lg:ap-flex ap-flex-col">
+      <div className="hidden h-screen sticky top-0 lg:flex flex-col">
         <Sidebar user={user} permissions={permissions} />
       </div>
 
       {/* Main content area */}
-      <div className="ap-flex ap-flex-1 ap-flex-col ap-min-w-0">
+      <div className="flex flex-1 flex-col min-w-0">
         {/* Mobile header (lg+ is handled by sidebar) */}
-        <header className="ap-flex lg:ap-hidden ap-h-14 ap-items-center ap-justify-between ap-border-b ap-border-white/10 ap-bg-slate-900 ap-px-4">
+        <header className="flex lg:hidden h-14 items-center justify-between border-b border-white/10 bg-slate-900 px-4">
           <MobileNavDrawer user={user} permissions={permissions} />
-          <span className="ap-text-sm ap-font-bold ap-text-white">AquaticPro</span>
-          <span className="ap-text-xs ap-text-slate-400 ap-truncate ap-max-w-[120px]">{user.displayName}</span>
+          <span className="text-sm font-bold text-white">AquaticPro</span>
+          <span className="text-xs text-slate-400 truncate max-w-[120px]">{user.displayName}</span>
         </header>
 
-        <main className="ap-flex-1 ap-p-6">{children}</main>
+        <main className="flex-1 p-6">{children}</main>
       </div>
     </div>
   );

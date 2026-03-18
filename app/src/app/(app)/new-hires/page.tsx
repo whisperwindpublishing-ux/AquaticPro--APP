@@ -44,23 +44,23 @@ export default function NewHiresPage() {
   }
 
   return (
-    <div className="ap-mx-auto ap-max-w-5xl ap-space-y-4">
+    <div className="mx-auto max-w-5xl space-y-4">
       <PageHeader title="New Hire Manager" description="Review and process applicants.">
-        <span className="ap-text-sm ap-text-gray-500">{data.total} total</span>
+        <span className="text-sm text-gray-500">{data.total} total</span>
       </PageHeader>
 
-      <div className="ap-flex ap-gap-3">
+      <div className="flex gap-3">
         <input
           type="search"
           placeholder="Search name or email…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="ap-flex-1 ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm focus:ap-border-brand-500 focus:ap-outline-none"
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
         />
         <select
           value={status}
           onChange={e => setStatus(e.target.value)}
-          className="ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm focus:ap-border-brand-500 focus:ap-outline-none"
+          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
         >
           <option value="">All statuses</option>
           {["pending", "interview", "approved", "hired", "rejected"].map(s =>
@@ -72,26 +72,26 @@ export default function NewHiresPage() {
       {hires.length === 0 ? (
         <EmptyState title="No applicants found" description="Try adjusting your search filters." />
       ) : (
-        <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-shadow-sm">
-          <table className="ap-w-full ap-text-sm">
+        <div className="rounded-xl border border-gray-100 bg-white shadow-sm">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="ap-border-b ap-border-gray-100 ap-text-left ap-text-xs ap-font-semibold ap-uppercase ap-tracking-wider ap-text-gray-400">
-                <th className="ap-px-5 ap-py-3">Name</th>
-                <th className="ap-px-5 ap-py-3">Email</th>
-                <th className="ap-px-5 ap-py-3">Applied</th>
-                <th className="ap-px-5 ap-py-3">Status</th>
-                <th className="ap-px-5 ap-py-3">Actions</th>
+              <tr className="border-b border-gray-100 text-left text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <th className="px-5 py-3">Name</th>
+                <th className="px-5 py-3">Email</th>
+                <th className="px-5 py-3">Applied</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Actions</th>
               </tr>
             </thead>
-            <tbody className="ap-divide-y ap-divide-gray-50">
+            <tbody className="divide-y divide-gray-50">
               {hires.map(h => (
-                <tr key={h.id} className="hover:ap-bg-gray-50">
-                  <td className="ap-px-5 ap-py-3 ap-font-medium ap-text-gray-800">{h.firstName} {h.lastName}</td>
-                  <td className="ap-px-5 ap-py-3 ap-text-gray-600">{h.email}</td>
-                  <td className="ap-px-5 ap-py-3 ap-text-gray-600">{h.applicationDate ? new Date(h.applicationDate).toLocaleDateString() : "—"}</td>
-                  <td className="ap-px-5 ap-py-3"><Badge variant={STATUS_VARIANT[h.status] ?? "neutral"}>{h.status}</Badge></td>
-                  <td className="ap-px-5 ap-py-3">
-                    <div className="ap-flex ap-gap-2 ap-flex-wrap">
+                <tr key={h.id} className="hover:bg-gray-50">
+                  <td className="px-5 py-3 font-medium text-gray-800">{h.firstName} {h.lastName}</td>
+                  <td className="px-5 py-3 text-gray-600">{h.email}</td>
+                  <td className="px-5 py-3 text-gray-600">{h.applicationDate ? new Date(h.applicationDate).toLocaleDateString() : "—"}</td>
+                  <td className="px-5 py-3"><Badge variant={STATUS_VARIANT[h.status] ?? "neutral"}>{h.status}</Badge></td>
+                  <td className="px-5 py-3">
+                    <div className="flex gap-2 flex-wrap">
                       {h.status !== "approved" && h.status !== "hired" && <Button size="sm" variant="ghost" onClick={() => updateStatus(h.id, "approved")}>Approve</Button>}
                       {h.status !== "rejected" && <Button size="sm" variant="ghost" onClick={() => updateStatus(h.id, "rejected")}>Reject</Button>}
                       {(h.status === "approved" || h.status === "hired") && (

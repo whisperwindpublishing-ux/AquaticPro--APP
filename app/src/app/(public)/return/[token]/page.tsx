@@ -11,14 +11,14 @@ function fmtDate(iso: string | Date) {
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
-    <div className="ap-rounded-2xl ap-bg-white ap-border ap-border-gray-100 ap-shadow-sm ap-p-10 ap-text-center">
-      <div className="ap-mx-auto ap-mb-4 ap-flex ap-h-14 ap-w-14 ap-items-center ap-justify-center ap-rounded-full ap-bg-error-100">
-        <svg className="ap-h-7 ap-w-7 ap-text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-10 text-center">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-error-100">
+        <svg className="h-7 w-7 text-error-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
       </div>
-      <h2 className="ap-text-lg ap-font-bold ap-text-gray-900 ap-mb-1">{title}</h2>
-      <p className="ap-text-sm ap-text-gray-500">{message}</p>
+      <h2 className="text-lg font-bold text-gray-900 mb-1">{title}</h2>
+      <p className="text-sm text-gray-500">{message}</p>
     </div>
   );
 }

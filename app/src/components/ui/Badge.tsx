@@ -1,13 +1,13 @@
 type BadgeVariant = "default" | "neutral" | "success" | "warning" | "error" | "info" | "purple";
 
 const VARIANT_CLASSES: Record<BadgeVariant, string> = {
-  default: "ap-bg-gray-100 ap-text-gray-700",
-  neutral: "ap-bg-gray-100 ap-text-gray-700",
-  success: "ap-bg-success-100 ap-text-success-700",
-  warning: "ap-bg-warning-100 ap-text-warning-700",
-  error:   "ap-bg-error-100 ap-text-error-700",
-  info:    "ap-bg-brand-100 ap-text-brand-700",
-  purple:  "ap-bg-lavender-100 ap-text-lavender-700",
+  default: "bg-gray-100 text-gray-700",
+  neutral: "bg-gray-100 text-gray-700",
+  success: "bg-success-100 text-success-700",
+  warning: "bg-warning-100 text-warning-700",
+  error:   "bg-error-100 text-error-700",
+  info:    "bg-brand-100 text-brand-700",
+  purple:  "bg-lavender-100 text-lavender-700",
 };
 
 interface BadgeProps {
@@ -19,7 +19,7 @@ interface BadgeProps {
 export function Badge({ variant = "default", children, className = "" }: BadgeProps) {
   return (
     <span
-      className={`ap-inline-flex ap-items-center ap-rounded-full ap-px-2.5 ap-py-0.5 ap-text-xs ap-font-medium ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${VARIANT_CLASSES[variant]} ${className}`}
     >
       {children}
     </span>

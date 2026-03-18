@@ -59,40 +59,40 @@ export default function AwardsPage() {
   }
 
   return (
-    <div className="ap-mx-auto ap-max-w-4xl ap-space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       <PageHeader title="Awesome Awards" description="Nominate and celebrate outstanding team members.">
         <Button size="sm" onClick={() => setShowForm(v => !v)}>{showForm ? "Cancel" : "+ Nominate"}</Button>
       </PageHeader>
 
       {periods.length > 0 && (
-        <div className="ap-flex ap-gap-2 ap-flex-wrap">
-          <button onClick={() => setPeriodId(null)} className={`ap-rounded-full ap-px-3 ap-py-1 ap-text-xs ap-font-medium ap-border ap-transition-colors ${ periodId === null ? "ap-bg-brand-500 ap-text-white ap-border-brand-500" : "ap-border-gray-200 ap-text-gray-600 hover:ap-border-brand-400" }`}>All</button>
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={() => setPeriodId(null)} className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${ periodId === null ? "bg-brand-500 text-white border-brand-500" : "border-gray-200 text-gray-600 hover:border-brand-400" }`}>All</button>
           {periods.map(p => (
-            <button key={p.id} onClick={() => setPeriodId(p.id)} className={`ap-rounded-full ap-px-3 ap-py-1 ap-text-xs ap-font-medium ap-border ap-transition-colors ${ periodId === p.id ? "ap-bg-brand-500 ap-text-white ap-border-brand-500" : "ap-border-gray-200 ap-text-gray-600 hover:ap-border-brand-400" }`}>{p.name}</button>
+            <button key={p.id} onClick={() => setPeriodId(p.id)} className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${ periodId === p.id ? "bg-brand-500 text-white border-brand-500" : "border-gray-200 text-gray-600 hover:border-brand-400" }`}>{p.name}</button>
           ))}
         </div>
       )}
 
       {showForm && (
-        <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-5 ap-shadow-sm">
-          <h2 className="ap-mb-4 ap-text-sm ap-font-semibold ap-text-gray-900">New Nomination</h2>
-          <form onSubmit={nominate} className="ap-grid ap-gap-4 sm:ap-grid-cols-2">
+        <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-gray-900">New Nomination</h2>
+          <form onSubmit={nominate} className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Nominee User ID</label>
-              <input className="ap-w-full ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm" type="number" value={nomineeId} onChange={e => setNomineeId(e.target.value)} required />
+              <label className="mb-1 block text-xs font-medium text-gray-600">Nominee User ID</label>
+              <input className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" type="number" value={nomineeId} onChange={e => setNomineeId(e.target.value)} required />
             </div>
             <div>
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Category</label>
-              <select className="ap-w-full ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm" value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Category</label>
+              <select className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" value={categoryId} onChange={e => setCategoryId(e.target.value)} required>
                 <option value="">Select…</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
-            <div className="sm:ap-col-span-2">
-              <label className="ap-mb-1 ap-block ap-text-xs ap-font-medium ap-text-gray-600">Reason</label>
-              <textarea className="ap-w-full ap-rounded-lg ap-border ap-border-gray-300 ap-px-3 ap-py-2 ap-text-sm ap-h-20 ap-resize-none" value={reason} onChange={e => setReason(e.target.value)} />
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-xs font-medium text-gray-600">Reason</label>
+              <textarea className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm h-20 resize-none" value={reason} onChange={e => setReason(e.target.value)} />
             </div>
-            <div className="sm:ap-col-span-2 ap-flex ap-justify-end ap-gap-2">
+            <div className="sm:col-span-2 flex justify-end gap-2">
               <Button variant="ghost" size="sm" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
               <Button size="sm" type="submit" disabled={saving}>{saving ? "Saving…" : "Nominate"}</Button>
             </div>
@@ -103,15 +103,15 @@ export default function AwardsPage() {
       {loading ? <FullPageSpinner /> : nominations.length === 0 ? (
         <EmptyState title="No nominations yet" description="Be the first to nominate someone!" />
       ) : (
-        <div className="ap-grid ap-gap-4 sm:ap-grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2">
           {nominations.map(n => (
-            <div key={n.id} className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-p-4 ap-shadow-sm ap-flex ap-flex-col ap-gap-2">
-              <div className="ap-flex ap-items-center ap-justify-between">
-                <span className="ap-text-xs ap-font-semibold ap-text-gray-500">Nominee #{n.nomineeId}</span>
+            <div key={n.id} className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-500">Nominee #{n.nomineeId}</span>
                 <Badge variant="info">{catMap[n.categoryId] ?? `Category #${n.categoryId}`}</Badge>
               </div>
-              {n.reason && <p className="ap-text-sm ap-text-gray-700 ap-line-clamp-3">{n.reason}</p>}
-              <button onClick={() => vote(n.id)} className="ap-mt-auto ap-self-start ap-text-xs ap-font-medium ap-text-brand-600 hover:ap-underline">👍 Vote</button>
+              {n.reason && <p className="text-sm text-gray-700 line-clamp-3">{n.reason}</p>}
+              <button onClick={() => vote(n.id)} className="mt-auto self-start text-xs font-medium text-brand-600 hover:underline">👍 Vote</button>
             </div>
           ))}
         </div>

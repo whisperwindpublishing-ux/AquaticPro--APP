@@ -36,14 +36,14 @@ export default function CareerPage() {
   const primaryRole = primaryAssignment ? data.roles.find(r => r.id === primaryAssignment.jobRoleId) : null;
 
   return (
-    <div className="ap-mx-auto ap-max-w-4xl ap-space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Career Development" description="Your job roles, promotion criteria, and progress." />
 
       {/* Current Role */}
       {primaryRole && (
-        <div className="ap-rounded-xl ap-border ap-border-brand-200 ap-bg-brand-50 ap-p-5">
-          <p className="ap-text-xs ap-font-semibold ap-uppercase ap-tracking-wider ap-text-brand-400">Current Role</p>
-          <h2 className="ap-mt-1 ap-text-xl ap-font-bold ap-text-brand-700">{primaryRole.name}</h2>
+        <div className="rounded-xl border border-brand-200 bg-brand-50 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wider text-brand-400">Current Role</p>
+          <h2 className="mt-1 text-xl font-bold text-brand-700">{primaryRole.name}</h2>
           <Badge variant="info">Tier {primaryRole.tier} — {TIER_LABELS[primaryRole.tier] ?? "Staff"}</Badge>
         </div>
       )}
@@ -51,11 +51,11 @@ export default function CareerPage() {
       {/* All assignments */}
       {assignedRoles.length > 0 && (
         <div>
-          <h3 className="ap-mb-2 ap-text-sm ap-font-semibold ap-text-gray-700">Assigned Roles</h3>
-          <div className="ap-flex ap-flex-wrap ap-gap-2">
+          <h3 className="mb-2 text-sm font-semibold text-gray-700">Assigned Roles</h3>
+          <div className="flex flex-wrap gap-2">
             {assignedRoles.map(r => (
-              <div key={r.id} className="ap-flex ap-items-center ap-gap-2 ap-rounded-lg ap-border ap-border-gray-200 ap-bg-white ap-px-3 ap-py-2">
-                <span className="ap-text-sm ap-font-medium ap-text-gray-800">{r.name}</span>
+              <div key={r.id} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                <span className="text-sm font-medium text-gray-800">{r.name}</span>
                 <Badge variant="default">T{r.tier}</Badge>
               </div>
             ))}
@@ -66,15 +66,15 @@ export default function CareerPage() {
       {/* Promotion criteria */}
       {data.criteria.length > 0 && (
         <div>
-          <h3 className="ap-mb-3 ap-text-sm ap-font-semibold ap-text-gray-700">Promotion Criteria</h3>
-          <div className="ap-rounded-xl ap-border ap-border-gray-100 ap-bg-white ap-divide-y ap-divide-gray-50 ap-shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold text-gray-700">Promotion Criteria</h3>
+          <div className="rounded-xl border border-gray-100 bg-white divide-y divide-gray-50 shadow-sm">
             {data.criteria.map(c => {
               const prog = progressMap[c.id];
               return (
-                <div key={c.id} className="ap-flex ap-items-center ap-gap-3 ap-px-5 ap-py-4">
-                  <div className="ap-flex-1 ap-min-w-0">
-                    <p className="ap-text-sm ap-font-medium ap-text-gray-900">{c.title}</p>
-                    {c.description && <p className="ap-text-xs ap-text-gray-500 ap-truncate">{c.description}</p>}
+                <div key={c.id} className="flex items-center gap-3 px-5 py-4">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{c.title}</p>
+                    {c.description && <p className="text-xs text-gray-500 truncate">{c.description}</p>}
                   </div>
                   <Badge variant={prog ? progressVariant(prog.status) : "default"}>
                     {prog?.status ?? "Not started"}
