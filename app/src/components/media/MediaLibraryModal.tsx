@@ -122,6 +122,7 @@ export default function MediaLibraryModal({
               accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt"
             />
             <button
+              type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50 transition-colors"
@@ -136,6 +137,7 @@ export default function MediaLibraryModal({
               Upload
             </button>
             <button
+              type="button"
               onClick={onClose}
               className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors"
             >
@@ -152,6 +154,7 @@ export default function MediaLibraryModal({
           <div className="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-sm">
             {(["all", "image", "file"] as const).map((t) => (
               <button
+              type="button"
                 key={t}
                 onClick={() => { setTypeTab(t); setPage(1); }}
                 className={`px-3 py-1.5 font-medium capitalize transition-colors ${
@@ -235,6 +238,7 @@ export default function MediaLibraryModal({
                     {/* Delete */}
                     {file.isOwn && (
                       <button
+              type="button"
                         onClick={(e) => { e.stopPropagation(); handleDelete(file.id); }}
                         className="absolute right-1 top-1 hidden rounded-full bg-red-500 p-1 text-white group-hover:flex hover:bg-red-600 transition-colors"
                         title="Delete file"
@@ -253,6 +257,7 @@ export default function MediaLibraryModal({
             {data && data.total > data.limit && (
               <div className="mt-6 flex items-center justify-center gap-2">
                 <button
+              type="button"
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                   disabled={page === 1}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-gray-50 transition-colors"
@@ -263,6 +268,7 @@ export default function MediaLibraryModal({
                   Page {page} of {Math.ceil(data.total / data.limit)}
                 </span>
                 <button
+              type="button"
                   onClick={() => setPage((p) => p + 1)}
                   disabled={page >= Math.ceil(data.total / data.limit)}
                   className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm disabled:opacity-40 hover:bg-gray-50 transition-colors"
@@ -309,6 +315,7 @@ export default function MediaLibraryModal({
                 <div className="flex flex-col gap-2 mt-auto">
                   {onSelect && (
                     <button
+              type="button"
                       onClick={() => { onSelect(selected); onClose(); }}
                       className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors"
                     >
@@ -325,6 +332,7 @@ export default function MediaLibraryModal({
                   </a>
                   {selected.isOwn && (
                     <button
+              type="button"
                       onClick={() => handleDelete(selected.id)}
                       className="rounded-lg border border-red-200 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                     >
